@@ -55,7 +55,7 @@ export default function PlaylistUpNext() {
         songId: songId, 
         playing: true, 
         currentTime: 0, 
-        startedAt: Date.now() 
+        updatedAt: Date.now() 
       });
     }
   };

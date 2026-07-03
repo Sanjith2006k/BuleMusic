@@ -80,12 +80,12 @@ export default function PartyHeader() {
               <Button variant="secondary" onClick={() => setModalOpen(true)} title="Change Password">
                 <KeyRound size={18} />
               </Button>
-              <Button variant="danger" onClick={handleEndParty} title="End Party" className="bg-red-500/20 text-red-500 hover:bg-red-500/30">
+              <Button variant="secondary" onClick={handleEndParty} title="End Party" className="bg-red-500/20 text-red-500 hover:bg-red-500/30">
                 <Power size={18} />
               </Button>
             </>
           ) : (
-            <Button variant="danger" onClick={handleLeaveParty} title="Leave Party" className="bg-red-500/20 text-red-500 hover:bg-red-500/30">
+            <Button variant="secondary" onClick={handleLeaveParty} title="Leave Party" className="bg-red-500/20 text-red-500 hover:bg-red-500/30">
               <LogOut size={18} />
             </Button>
           )}

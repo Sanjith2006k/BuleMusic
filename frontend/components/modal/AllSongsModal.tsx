@@ -40,7 +40,7 @@ export default function AllSongsModal({ open, onClose }: Props) {
         songId: songId, 
         playing: true, 
         currentTime: 0, 
-        startedAt: Date.now() 
+        updatedAt: Date.now() 
       });
     }
     
@@ -85,9 +85,9 @@ export default function AllSongsModal({ open, onClose }: Props) {
         currentTime: 0,
         songId: songsToQueue[0]
       });
-      usePlaybackStore.setState({ songId: songsToQueue[0], playing: true, startedAt: Date.now() });
+      usePlaybackStore.setState({ songId: songsToQueue[0], playing: true, updatedAt: Date.now() });
     } else if (!roomCode) {
-      usePlaybackStore.setState({ songId: songsToQueue[0], playing: true, currentTime: 0, startedAt: Date.now() });
+      usePlaybackStore.setState({ songId: songsToQueue[0], playing: true, currentTime: 0, updatedAt: Date.now() });
     }
     onClose();
   };

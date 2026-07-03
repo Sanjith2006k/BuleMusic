@@ -14,10 +14,17 @@ export default function Queue() {
 
   const isHost = userId === hostId && hostId !== null;
 
-  // Resolve string IDs to song objects
-  const resolvedQueue = queue.map((id) => {
-    const song = getSongById(id);
-    return song || { id, title: "Loading...", artist: "", duration: "", cover: "/default-cover.png", url: "" };
+  // Resolve queue item objects to song objects (retaining the unique queue item ID)
+  const resolvedQueue = queue.map((item) => {
+    const song = getSongById(item.songId);
+    return {
+      id: item.id,
+      title: song?.title || "Loading...",
+      artist: song?.artist || "",
+      duration: song?.duration || "",
+      cover: song?.cover || "/default-cover.png",
+      url: song?.url || "",
+    };
   });
 
   const handleReorder = (newOrder: typeof resolvedQueue) => {
