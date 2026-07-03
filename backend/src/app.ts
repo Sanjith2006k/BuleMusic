@@ -23,7 +23,10 @@ app.use("/api/", apiLimiter);
 
 app.use(
   cors({
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      // Dynamically allow the request origin to prevent CORS blocks, especially for Vercel preview deploys and trailing slashes
+      callback(null, true);
+    },
     credentials: true,
   }),
 );
