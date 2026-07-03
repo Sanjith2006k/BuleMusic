@@ -14,7 +14,9 @@ const httpServer = http.createServer(app);
 
 const io = new Server(httpServer, {
   cors: {
-    origin: process.env.FRONTEND_URL,
+    origin: (origin, callback) => {
+      callback(null, true);
+    },
     credentials: true,
   },
 });
