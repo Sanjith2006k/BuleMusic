@@ -14,6 +14,7 @@ interface SongState {
   isLoading: boolean;
   error: string | null;
   fetchSongs: () => Promise<void>;
+  refreshSongs: () => Promise<number>;
   getSongById: (id: string) => Song | undefined;
 }
 
@@ -33,6 +34,24 @@ export const useSongStore = create<SongState>((set, get) => ({
       set({ songs: data, isLoading: false });
     } catch (err: any) {
       set({ error: err.message, isLoading: false });
+    }
+  },
+
+  refreshSongs: async () => {
+    set({ isLoading: true, error: null });
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs/refresh`, {
+        method: "POST",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to refresh songs");
+      }
+      const data = await response.json();
+      set({ songs: data.songs, isLoading: false });
+      return data.newCount;
+    } catch (err: any) {
+      set({ error: err.message, isLoading: false });
+      return 0;
     }
   },
 

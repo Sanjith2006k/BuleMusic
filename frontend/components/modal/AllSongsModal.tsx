@@ -17,7 +17,7 @@ interface Props {
 
 export default function AllSongsModal({ open, onClose }: Props) {
   const songs = useSongStore((state) => state.songs);
-  const fetchSongs = useSongStore((state) => state.fetchSongs);
+  const refreshSongs = useSongStore((state) => state.refreshSongs);
   const isLoading = useSongStore((state) => state.isLoading);
   const { userId, hostId, roomCode } = useRoomStore();
   const socket = useSocket();
@@ -101,13 +101,20 @@ export default function AllSongsModal({ open, onClose }: Props) {
         
         <div className="flex items-center gap-2">
           <button 
-            onClick={() => fetchSongs()}
+            onClick={async () => {
+              const newCount = await refreshSongs();
+              if (newCount > 0) {
+                toast.success(`Found ${newCount} new song${newCount > 1 ? 's' : ''} from AWS!`);
+              } else {
+                toast.info('No new songs found. All songs are up to date.');
+              }
+            }}
             disabled={isLoading}
             className={`flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition shadow-sm ${isLoading ? 'opacity-50' : ''}`}
-            title="Reload songs from AWS"
+            title="Scan AWS for new songs"
           >
             <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-            {isLoading ? 'Loading...' : 'Reload'}
+            {isLoading ? 'Scanning...' : 'Reload'}
           </button>
 
           {(!roomCode || isHost) && songs.length > 0 && (
