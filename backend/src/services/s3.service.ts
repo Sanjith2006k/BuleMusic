@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, ListObjectsV2Command, ListObjectsV2CommandOutput } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, ListObjectsV2Command, ListObjectsV2CommandOutput, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "../config/env";
 
@@ -25,6 +25,29 @@ export const s3Service = {
     // Generate signed URL valid for 1 hour (3600 seconds)
     const signedUrl = await getSignedUrl(s3Client, command, { expiresIn: 3600 });
     return signedUrl;
+  },
+
+  /**
+   * Uploads a file to S3 under the "songs/" prefix.
+   */
+  async uploadSong(fileBuffer: Buffer, fileName: string, mimeType: string): Promise<string> {
+    if (!env.S3_BUCKET_NAME) {
+      throw new Error("S3_BUCKET_NAME is not set");
+    }
+
+    // Replace spaces with hyphens and ensure it ends with .mp3
+    const safeName = fileName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.\-_]/g, '');
+    const key = `songs/${Date.now()}-${safeName}`;
+
+    const command = new PutObjectCommand({
+      Bucket: env.S3_BUCKET_NAME,
+      Key: key,
+      Body: fileBuffer,
+      ContentType: mimeType,
+    });
+
+    await s3Client.send(command);
+    return key;
   },
 
   /**
