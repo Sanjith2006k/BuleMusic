@@ -7,7 +7,7 @@ import { useSongStore } from "@/store/songStore";
 import { useRoomStore } from "@/store/roomStore";
 import useSocket from "@/hooks/useSocket";
 import Image from "next/image";
-import { Plus, Edit2, Check, X, ListPlus } from "lucide-react";
+import { Plus, Edit2, Check, X, ListPlus, ListEnd, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { usePlaylistStore } from "@/store/playlistStore";
 
@@ -39,9 +39,16 @@ export default function SearchSongs() {
     ).slice(0, 5); // Limit to top 5 results for compactness
   }, [search, songs]);
 
+  const handlePlayNext = (songId: string) => {
+    socket.emit("play-next-queue", { roomCode, songId, memberId: userId });
+    setSearch(""); // clear after adding
+    toast.success("Playing next");
+  };
+
   const handleAddToQueue = (songId: string) => {
     socket.emit("add-to-queue", { roomCode, songId, memberId: userId });
     setSearch(""); // clear after adding
+    toast.success("Added to end of queue");
   };
 
   const handleAddToPlaylist = (playlistId: string, songId: string) => {
@@ -167,19 +174,28 @@ export default function SearchSongs() {
                       className="p-2 text-zinc-400 hover:text-white transition-colors"
                       title="Add to Playlist"
                     >
-                      <ListPlus size={16} />
+                      <FolderPlus size={16} />
                     </button>
                     <button
                       onClick={() => startEditing(song)}
                       className="p-2 text-zinc-400 hover:text-white transition-colors"
+                      title="Edit Song"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button
+                      onClick={() => handlePlayNext(song.id)}
+                      className="p-2 text-zinc-400 hover:text-white transition-colors"
+                      title="Play Next"
+                    >
+                      <ListPlus size={18} />
+                    </button>
+                    <button
                       onClick={() => handleAddToQueue(song.id)}
                       className="p-2 text-zinc-400 hover:text-white transition-colors"
+                      title="Add to end of Queue"
                     >
-                      <Plus size={18} />
+                      <ListEnd size={18} />
                     </button>
                   </>
                 )}
