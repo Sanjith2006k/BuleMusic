@@ -6,7 +6,7 @@ import path from "path";
 const SONGS_PATH = path.join(__dirname, "../data/songs.json");
 
 // Helper to read songs.json fresh every time (not cached at import)
-function readSongsFile(): any[] {
+export function readSongsFile(): any[] {
   try {
     const raw = fs.readFileSync(SONGS_PATH, "utf-8");
     return JSON.parse(raw);
@@ -17,7 +17,7 @@ function readSongsFile(): any[] {
 }
 
 // Helper to write songs.json
-function writeSongsFile(songs: any[]) {
+export function writeSongsFile(songs: any[]) {
   fs.writeFileSync(SONGS_PATH, JSON.stringify(songs, null, 2), "utf-8");
 }
 

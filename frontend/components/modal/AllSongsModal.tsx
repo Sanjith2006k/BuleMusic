@@ -7,8 +7,9 @@ import useAudio from "@/hooks/useAudio";
 import useSocket from "@/hooks/useSocket";
 import Modal from "./Modal";
 import Image from "next/image";
-import { Play, Plus, Shuffle, RefreshCw } from "lucide-react";
+import { Play, Plus, Shuffle, RefreshCw, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { useState } from "react";
 
 interface Props {
   open: boolean;
@@ -23,7 +24,43 @@ export default function AllSongsModal({ open, onClose }: Props) {
   const socket = useSocket();
   const { play } = useAudio();
 
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
   const isHost = userId === hostId && hostId !== null;
+
+  const handleDeleteSong = async (e: React.MouseEvent, songId: string, title: string) => {
+    e.stopPropagation();
+    
+    if (!confirm(`Are you sure you want to permanently delete "${title}" from AWS S3?`)) return;
+
+    const username = prompt("Enter Admin Username:");
+    if (!username) return;
+
+    const password = prompt("Enter Admin Password:");
+    if (!password) return;
+
+    setDeletingId(songId);
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000"}/api/admin/song`, {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password, songId })
+      });
+
+      if (!res.ok) {
+        const errorData = await res.json();
+        throw new Error(errorData.message || "Failed to delete song");
+      }
+
+      toast.success(`Song "${title}" deleted successfully`);
+      await refreshSongs();
+    } catch (err: any) {
+      toast.error(err.message);
+    } finally {
+      setDeletingId(null);
+    }
+  };
 
   const handlePlaySong = (songId: string) => {
     if (!isHost && roomCode) return;
@@ -34,10 +71,7 @@ export default function AllSongsModal({ open, onClose }: Props) {
         currentTime: 0,
         songId: songId
       });
-      // The host will receive the updated playback-state from the backend instantly,
-      // which has the correct startedAt timestamp. This prevents latency desyncs.
     } else {
-      // Offline mode
       usePlaybackStore.setState({ 
         songId: songId, 
         playing: true, 
@@ -155,14 +189,25 @@ export default function AllSongsModal({ open, onClose }: Props) {
               </h3>
               <p className="text-xs text-zinc-400 truncate">{song.artist}</p>
             </div>
-            
-            <button 
-              onClick={(e) => handleAddToQueue(e, song.id, song.title)}
-              className="p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10 shrink-0"
-              title="Add to Queue"
-            >
-              <Plus size={16} />
-            </button>
+            <div className="flex items-center gap-1 shrink-0">
+              {isHost && (
+                <button 
+                  onClick={(e) => handleDeleteSong(e, song.id, song.title)}
+                  disabled={deletingId === song.id}
+                  className="p-2 text-zinc-400 hover:text-red-400 transition rounded-full hover:bg-red-400/10 shrink-0"
+                  title="Delete Song"
+                >
+                  <Trash2 size={16} className={deletingId === song.id ? "opacity-50" : ""} />
+                </button>
+              )}
+              <button 
+                onClick={(e) => handleAddToQueue(e, song.id, song.title)}
+                className="p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10 shrink-0"
+                title="Add to Queue"
+              >
+                <Plus size={16} />
+              </button>
+            </div>
           </div>
         ))}
       </div>

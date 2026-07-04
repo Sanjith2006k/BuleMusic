@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, ListObjectsV2Command, ListObjectsV2CommandOutput, PutObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, ListObjectsV2Command, ListObjectsV2CommandOutput, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "../config/env";
 
@@ -48,6 +48,22 @@ export const s3Service = {
 
     await s3Client.send(command);
     return key;
+  },
+
+  /**
+   * Deletes a file from S3.
+   */
+  async deleteSong(key: string): Promise<void> {
+    if (!env.S3_BUCKET_NAME) {
+      throw new Error("S3_BUCKET_NAME is not set");
+    }
+
+    const command = new DeleteObjectCommand({
+      Bucket: env.S3_BUCKET_NAME,
+      Key: key,
+    });
+
+    await s3Client.send(command);
   },
 
   /**

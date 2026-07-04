@@ -56,3 +56,47 @@ export const uploadSong = async (req: Request, res: Response) => {
     res.status(500).json({ success: false, message: (error as Error).message });
   }
 };
+
+import { readSongsFile, writeSongsFile } from "./song.controller";
+
+export const deleteSong = async (req: Request, res: Response) => {
+  try {
+    const { username, password, songId } = req.body;
+    const current = getAdminCredentials();
+    
+    if (username !== current.username || password !== current.password) {
+      return res.status(401).json({ success: false, message: "Invalid admin credentials" });
+    }
+
+    if (!songId) {
+      return res.status(400).json({ success: false, message: "songId is required" });
+    }
+
+    const songs = readSongsFile();
+    const songIndex = songs.findIndex((s: any) => s.id === songId);
+    
+    if (songIndex === -1) {
+      return res.status(404).json({ success: false, message: "Song not found" });
+    }
+
+    const song = songs[songIndex];
+
+    // Delete from S3
+    if (song.s3Key) {
+      try {
+        await s3Service.deleteSong(song.s3Key);
+      } catch (err) {
+        console.error("Failed to delete from S3, proceeding anyway:", err);
+      }
+    }
+
+    // Remove from songs.json
+    songs.splice(songIndex, 1);
+    writeSongsFile(songs);
+
+    res.json({ success: true, message: "Song deleted successfully" });
+  } catch (error) {
+    console.error("Delete error:", error);
+    res.status(500).json({ success: false, message: (error as Error).message });
+  }
+};
