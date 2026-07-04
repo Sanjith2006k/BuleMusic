@@ -5,7 +5,7 @@ import { useRoomStore } from "@/store/roomStore";
 import { usePlaybackStore } from "@/store/playbackStore";
 import useSocket from "@/hooks/useSocket";
 import Image from "next/image";
-import { Play, Plus, ListPlus, ListEnd } from "lucide-react";
+import { Play, Plus } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { Song } from "@/store/songStore";
@@ -43,16 +43,6 @@ export default function NewlyAddedSongs() {
         currentTime: 0, 
         updatedAt: Date.now() 
       });
-    }
-  };
-
-  const handlePlayNext = (e: React.MouseEvent, songId: string, title: string) => {
-    e.stopPropagation();
-    if (roomCode) {
-      socket.emit("play-next-queue", { roomCode, songId, memberId: userId });
-      toast.success(`Playing ${title} next`);
-    } else {
-      toast.error("You must be in a party to use Play Next.");
     }
   };
 
@@ -113,22 +103,13 @@ export default function NewlyAddedSongs() {
                   {song.artist}
                 </p>
               </div>
-              <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity -translate-y-2 group-hover:translate-y-0">
-                <button 
-                  onClick={(e) => handlePlayNext(e, song.id, song.title)}
-                  className="p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10"
-                  title="Play Next"
-                >
-                  <ListPlus size={18} />
-                </button>
-                <button 
-                  onClick={(e) => handleAddToQueue(e, song.id, song.title)}
-                  className="p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10"
-                  title="Add to end of Queue"
-                >
-                  <ListEnd size={18} />
-                </button>
-              </div>
+              <button 
+                onClick={(e) => handleAddToQueue(e, song.id, song.title)}
+                className="shrink-0 p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10 opacity-0 group-hover:opacity-100 -translate-y-2 group-hover:translate-y-0"
+                title="Add to Queue"
+              >
+                <Plus size={18} />
+              </button>
             </div>
           </div>
         ))}

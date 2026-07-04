@@ -7,7 +7,7 @@ import useAudio from "@/hooks/useAudio";
 import useSocket from "@/hooks/useSocket";
 import Modal from "./Modal";
 import Image from "next/image";
-import { Play, Plus, Shuffle, RefreshCw, ListPlus, ListEnd } from "lucide-react";
+import { Play, Plus, Shuffle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -47,16 +47,6 @@ export default function AllSongsModal({ open, onClose }: Props) {
     }
     
     onClose();
-  };
-
-  const handlePlayNext = (e: React.MouseEvent, songId: string, title: string) => {
-    e.stopPropagation();
-    if (roomCode) {
-      socket.emit("play-next-queue", { roomCode, songId, memberId: userId });
-      toast.success(`Playing ${title} next`);
-    } else {
-      toast.error("You must be in a party to use Play Next.");
-    }
   };
 
   const handleAddToQueue = (e: React.MouseEvent, songId: string, title: string) => {
@@ -166,22 +156,13 @@ export default function AllSongsModal({ open, onClose }: Props) {
               <p className="text-xs text-zinc-400 truncate">{song.artist}</p>
             </div>
             
-            <div className="flex items-center gap-1 shrink-0">
-              <button 
-                onClick={(e) => handlePlayNext(e, song.id, song.title)}
-                className="p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10"
-                title="Play Next"
-              >
-                <ListPlus size={16} />
-              </button>
-              <button 
-                onClick={(e) => handleAddToQueue(e, song.id, song.title)}
-                className="p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10"
-                title="Add to end of Queue"
-              >
-                <ListEnd size={16} />
-              </button>
-            </div>
+            <button 
+              onClick={(e) => handleAddToQueue(e, song.id, song.title)}
+              className="p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10 shrink-0"
+              title="Add to Queue"
+            >
+              <Plus size={16} />
+            </button>
           </div>
         ))}
       </div>

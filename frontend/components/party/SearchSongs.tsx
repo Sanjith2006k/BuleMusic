@@ -7,7 +7,7 @@ import { useSongStore } from "@/store/songStore";
 import { useRoomStore } from "@/store/roomStore";
 import useSocket from "@/hooks/useSocket";
 import Image from "next/image";
-import { Plus, Edit2, Check, X, ListPlus, ListEnd, FolderPlus } from "lucide-react";
+import { Plus, Edit2, Check, X, FolderPlus } from "lucide-react";
 import { toast } from "sonner";
 import { usePlaylistStore } from "@/store/playlistStore";
 
@@ -39,16 +39,10 @@ export default function SearchSongs() {
     ).slice(0, 5); // Limit to top 5 results for compactness
   }, [search, songs]);
 
-  const handlePlayNext = (songId: string) => {
-    socket.emit("play-next-queue", { roomCode, songId, memberId: userId });
-    setSearch(""); // clear after adding
-    toast.success("Playing next");
-  };
-
   const handleAddToQueue = (songId: string) => {
     socket.emit("add-to-queue", { roomCode, songId, memberId: userId });
     setSearch(""); // clear after adding
-    toast.success("Added to end of queue");
+    toast.success("Added to queue");
   };
 
   const handleAddToPlaylist = (playlistId: string, songId: string) => {
@@ -184,18 +178,11 @@ export default function SearchSongs() {
                       <Edit2 size={16} />
                     </button>
                     <button
-                      onClick={() => handlePlayNext(song.id)}
-                      className="p-2 text-zinc-400 hover:text-white transition-colors"
-                      title="Play Next"
-                    >
-                      <ListPlus size={18} />
-                    </button>
-                    <button
                       onClick={() => handleAddToQueue(song.id)}
                       className="p-2 text-zinc-400 hover:text-white transition-colors"
-                      title="Add to end of Queue"
+                      title="Add to Queue"
                     >
-                      <ListEnd size={18} />
+                      <Plus size={18} />
                     </button>
                   </>
                 )}

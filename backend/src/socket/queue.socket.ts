@@ -20,37 +20,23 @@ export function registerQueueEvents(io: Server, socket: Socket) {
       io.to(roomCode).emit("playback-state", room.playback);
       io.to(roomCode).emit("room-updated", room);
     } else {
-      room.queue.push({
-        id: crypto.randomUUID(),
-        songId,
-        addedBy
-      });
-      io.to(roomCode).emit("room-updated", room);
-    }
-  });
-
-  socket.on("play-next-queue", ({ roomCode, songId, memberId }) => {
-    const room = roomService.getRoom(roomCode);
-    if (!room) return;
-
-    const member = room.members.find(m => m.id === memberId);
-    const addedBy = member ? member.name : "Unknown User";
-
-    if (!room.playback.songId) {
-      // Auto-play if nothing is currently playing
-      room.playback.songId = songId;
-      room.playback.currentTime = 0;
-      room.playback.playing = true;
-      room.playback.updatedAt = Date.now();
+      // Find the first song added by "System" (from a playlist)
+      const firstSystemIndex = room.queue.findIndex(item => item.addedBy === "System");
       
-      io.to(roomCode).emit("playback-state", room.playback);
-      io.to(roomCode).emit("room-updated", room);
-    } else {
-      room.queue.unshift({
+      const newItem = {
         id: crypto.randomUUID(),
         songId,
         addedBy
-      });
+      };
+
+      if (firstSystemIndex !== -1) {
+        // Insert right before the first System song (end of priority queue)
+        room.queue.splice(firstSystemIndex, 0, newItem);
+      } else {
+        // No system songs, just append to the end of the priority queue
+        room.queue.push(newItem);
+      }
+      
       io.to(roomCode).emit("room-updated", room);
     }
   });
