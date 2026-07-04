@@ -7,7 +7,7 @@ import useAudio from "@/hooks/useAudio";
 import useSocket from "@/hooks/useSocket";
 import Modal from "./Modal";
 import Image from "next/image";
-import { Play, Plus, Shuffle } from "lucide-react";
+import { Play, Plus, Shuffle, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 
 interface Props {
@@ -17,6 +17,8 @@ interface Props {
 
 export default function AllSongsModal({ open, onClose }: Props) {
   const songs = useSongStore((state) => state.songs);
+  const fetchSongs = useSongStore((state) => state.fetchSongs);
+  const isLoading = useSongStore((state) => state.isLoading);
   const { userId, hostId, roomCode } = useRoomStore();
   const socket = useSocket();
   const { play } = useAudio();
@@ -97,15 +99,27 @@ export default function AllSongsModal({ open, onClose }: Props) {
       <div className="mb-4 flex items-center justify-between">
         <span className="text-sm text-zinc-400">{songs.length} songs</span>
         
-        {(!roomCode || isHost) && songs.length > 0 && (
+        <div className="flex items-center gap-2">
           <button 
-            onClick={handleShufflePlayAll}
-            className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition shadow-sm"
+            onClick={() => fetchSongs()}
+            disabled={isLoading}
+            className={`flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition shadow-sm ${isLoading ? 'opacity-50' : ''}`}
+            title="Reload songs from AWS"
           >
-            <Shuffle size={14} />
-            Shuffle All
+            <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
+            {isLoading ? 'Loading...' : 'Reload'}
           </button>
-        )}
+
+          {(!roomCode || isHost) && songs.length > 0 && (
+            <button 
+              onClick={handleShufflePlayAll}
+              className="flex items-center gap-2 rounded-full bg-white/10 px-4 py-1.5 text-xs font-medium text-white hover:bg-white/20 transition shadow-sm"
+            >
+              <Shuffle size={14} />
+              Shuffle All
+            </button>
+          )}
+        </div>
       </div>
       <div className="space-y-2 max-h-[60vh] overflow-y-auto pr-2">
         {songs.map((song) => (
