@@ -21,7 +21,10 @@ export function registerRoomEvents(io: Server, socket: Socket) {
 
     const room = roomService.getRoom(code);
 
-    if (!room) return;
+    if (!room) {
+      socket.emit("room-not-found");
+      return;
+    }
 
     // If they are not in the room members list (e.g. timeout expired or direct link), add them!
     const existingMember = room.members.find(m => m.id === memberId);

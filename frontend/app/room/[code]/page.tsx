@@ -90,14 +90,21 @@ export default function RoomPage() {
       window.location.href = "/";
     };
 
+    const handleRoomNotFound = () => {
+      alert("This party does not exist or has already ended.");
+      window.location.href = "/";
+    };
+
     socket.on("room-updated", handleRoomUpdate);
     socket.on("sync-initial-state", handleInitialSync);
     socket.on("room-ended", handleRoomEnded);
+    socket.on("room-not-found", handleRoomNotFound);
 
     return () => {
       socket.off("room-updated", handleRoomUpdate);
       socket.off("sync-initial-state", handleInitialSync);
       socket.off("room-ended", handleRoomEnded);
+      socket.off("room-not-found", handleRoomNotFound);
     };
   }, [socket, setRoomState, setPlayback, play, pause, seek]);
 
