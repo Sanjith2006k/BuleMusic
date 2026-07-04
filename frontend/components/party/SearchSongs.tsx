@@ -47,7 +47,6 @@ export default function SearchSongs() {
     }
 
     socket.emit("add-to-queue", { roomCode, songId, memberId: userId });
-    setSearch(""); // clear after adding
     toast.success("Added to queue");
   };
 
