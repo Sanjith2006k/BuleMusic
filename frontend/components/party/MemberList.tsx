@@ -5,10 +5,19 @@ import { AnimatePresence } from "framer-motion";
 import GlassCard from "../ui/GlassCard";
 import MemberCard from "./MemberCard";
 import { useRoomStore } from "@/store/roomStore";
+import useSocket from "@/hooks/useSocket";
 
 export default function MemberList() {
-  const { members, hostId } = useRoomStore();
+  const { members, hostId, userId, roomCode } = useRoomStore();
+  const socket = useSocket();
   const maxMembers = 10; // Or whatever limit we want
+
+  const handleKick = (memberId: string) => {
+    if (!roomCode) return;
+    if (confirm("Are you sure you want to kick this user from the party?")) {
+      socket.emit("kick-member", { roomCode, memberId });
+    }
+  };
 
   return (
     <GlassCard className="p-6">
@@ -31,7 +40,8 @@ export default function MemberList() {
                 isHost={member.id === hostId} 
                 online={true} 
                 listening={true}
-                color={color} 
+                color={color}
+                onKick={userId === hostId && member.id !== hostId ? () => handleKick(member.id) : undefined}
               />
             );
           })}

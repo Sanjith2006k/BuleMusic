@@ -95,16 +95,25 @@ export default function RoomPage() {
       window.location.href = "/";
     };
 
+    const handleMemberKicked = ({ memberId: kickedMemberId }: { memberId: string }) => {
+      if (kickedMemberId === useRoomStore.getState().userId) {
+        alert("You have been kicked from the party.");
+        window.location.href = "/";
+      }
+    };
+
     socket.on("room-updated", handleRoomUpdate);
     socket.on("sync-initial-state", handleInitialSync);
     socket.on("room-ended", handleRoomEnded);
     socket.on("room-not-found", handleRoomNotFound);
+    socket.on("member-kicked", handleMemberKicked);
 
     return () => {
       socket.off("room-updated", handleRoomUpdate);
       socket.off("sync-initial-state", handleInitialSync);
       socket.off("room-ended", handleRoomEnded);
       socket.off("room-not-found", handleRoomNotFound);
+      socket.off("member-kicked", handleMemberKicked);
     };
   }, [socket, setRoomState, setPlayback, play, pause, seek]);
 

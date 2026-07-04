@@ -89,6 +89,21 @@ export function registerRoomEvents(io: Server, socket: Socket) {
     roomService.deleteRoom(code);
   });
 
+  socket.on("kick-member", ({ roomCode, memberId }) => {
+    const room = roomService.getRoom(roomCode);
+    if (!room) return;
+
+    // Verify that the person requesting the kick is the host
+    if (socket.data.memberId !== room.hostId) return;
+
+    // Remove the member from the room's member list
+    roomService.leaveRoom(roomCode, memberId);
+
+    // Notify everyone (especially the kicked user) that they were kicked
+    io.to(roomCode).emit("member-kicked", { memberId });
+    io.to(roomCode).emit("room-updated", roomService.getRoom(roomCode));
+  });
+
   socket.on("disconnect", () => {
     const { code, memberId } = socket.data;
     if (code && memberId) {

@@ -9,6 +9,7 @@ interface Props {
   online: boolean;
   listening: boolean;
   color: string;
+  onKick?: () => void;
 }
 
 export default function MemberCard({
@@ -17,6 +18,7 @@ export default function MemberCard({
   online,
   listening,
   color,
+  onKick,
 }: Props) {
   return (
     <motion.div
@@ -69,6 +71,29 @@ export default function MemberCard({
           </div>
         </div>
       </div>
+
+      {onKick && (
+        <button
+          onClick={onKick}
+          className="ml-4 rounded-full p-2 text-zinc-400 hover:bg-white/10 hover:text-red-400 transition"
+          title="Kick from party"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+          >
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
+      )}
     </motion.div>
   );
 }
