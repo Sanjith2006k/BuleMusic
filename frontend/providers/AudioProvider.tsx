@@ -173,35 +173,56 @@ export default function AudioProvider({ children }: Props) {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const { roomCode } = useRoomStore.getState();
-    if (!roomCode) {
-      if (playing) {
+    const syncAudio = (state: ReturnType<typeof usePlaybackStore.getState>) => {
+      const { roomCode } = useRoomStore.getState();
+      
+      if (!roomCode) {
+        if (state.playing) {
+          audio.play().catch(e => {
+            console.error("Autoplay blocked:", e);
+            setAutoplayBlocked(true);
+          });
+        } else {
+          audio.pause();
+        }
+        return;
+      }
+
+      if (state.playing) {
+        const targetTime = state.currentTime + (state.updatedAt ? (Date.now() - state.updatedAt) / 1000 : 0);
+        if (Math.abs(audio.currentTime - targetTime) > 1.5) {
+          audio.currentTime = targetTime;
+        }
         audio.play().catch(e => {
           console.error("Autoplay blocked:", e);
           setAutoplayBlocked(true);
         });
       } else {
         audio.pause();
+        if (Math.abs(audio.currentTime - state.currentTime) > 1.5) {
+          audio.currentTime = state.currentTime;
+        }
       }
-      return;
-    }
+    };
 
-    if (playing) {
-      const targetTime = getTargetTime();
-      if (Math.abs(audio.currentTime - targetTime) > 1.5) {
-        audio.currentTime = targetTime;
+    // Use Zustand subscribe to instantly react to playback state changes, 
+    // bypassing React's rendering throttle when the tab is in the background or locked!
+    const unsubscribe = usePlaybackStore.subscribe((state, prevState) => {
+      if (
+        state.playing !== prevState.playing ||
+        state.updatedAt !== prevState.updatedAt ||
+        state.currentTime !== prevState.currentTime ||
+        state.songId !== prevState.songId
+      ) {
+        syncAudio(state);
       }
-      audio.play().catch(e => {
-        console.error("Autoplay blocked:", e);
-        setAutoplayBlocked(true);
-      });
-    } else {
-      audio.pause();
-      if (Math.abs(audio.currentTime - serverCurrentTime) > 1.5) {
-        audio.currentTime = serverCurrentTime;
-      }
-    }
-  }, [playing, updatedAt, serverCurrentTime, getTargetTime]);
+    });
+
+    // Run once on mount to catch the initial state
+    syncAudio(usePlaybackStore.getState());
+
+    return () => unsubscribe();
+  }, []);
 
   // --- Exposed Audio Engine Functions for Local Overrides (Volume, etc) ---
   const play = async () => {}; // No-op: strictly controlled by server state now

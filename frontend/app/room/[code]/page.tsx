@@ -62,6 +62,9 @@ export default function RoomPage() {
     const handleDisconnect = (reason: string) => {
       if (reason === "io server disconnect" || reason === "io client disconnect") return;
       
+      // Auto-pause locally to prevent playing out of sync when connection drops
+      usePlaybackStore.getState().setPlaying(false);
+
       // Warn the user about poor connection if it was an unintentional drop (e.g. ping timeout, transport error)
       const isMobile = window.innerWidth <= 768; // simple mobile check
       if (isMobile) {
