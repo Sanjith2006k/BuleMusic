@@ -20,7 +20,7 @@ export default function AllSongsModal({ open, onClose }: Props) {
   const songs = useSongStore((state) => state.songs);
   const refreshSongs = useSongStore((state) => state.refreshSongs);
   const isLoading = useSongStore((state) => state.isLoading);
-  const { userId, hostId, roomCode } = useRoomStore();
+  const { userId, hostId, roomCode, queue } = useRoomStore();
   const socket = useSocket();
   const { play } = useAudio();
 
@@ -86,6 +86,12 @@ export default function AllSongsModal({ open, onClose }: Props) {
   const handleAddToQueue = (e: React.MouseEvent, songId: string, title: string) => {
     e.stopPropagation(); // Prevent triggering handlePlaySong
     if (roomCode) {
+      const isAlreadyInQueue = queue.some(item => item.songId === songId);
+      if (isAlreadyInQueue) {
+        toast.error("Song is already in the queue");
+        return;
+      }
+
       socket.emit("add-to-queue", { roomCode, songId, memberId: userId });
       toast.success(`Added ${title} to queue`);
     } else {

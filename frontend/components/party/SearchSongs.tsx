@@ -14,7 +14,7 @@ import { usePlaylistStore } from "@/store/playlistStore";
 export default function SearchSongs() {
   const [search, setSearch] = useState("");
   const { songs, fetchSongs } = useSongStore();
-  const { hostId, userId, roomCode } = useRoomStore();
+  const { hostId, userId, roomCode, queue } = useRoomStore();
   const socket = useSocket();
 
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -40,6 +40,12 @@ export default function SearchSongs() {
   }, [search, songs]);
 
   const handleAddToQueue = (songId: string) => {
+    const isAlreadyInQueue = queue.some(item => item.songId === songId);
+    if (isAlreadyInQueue) {
+      toast.error("Song is already in the queue");
+      return;
+    }
+
     socket.emit("add-to-queue", { roomCode, songId, memberId: userId });
     setSearch(""); // clear after adding
     toast.success("Added to queue");
