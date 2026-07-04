@@ -40,13 +40,6 @@ export function registerRoomEvents(io: Server, socket: Socket) {
     if (isNewJoin) {
       // Notify everyone to play the 'ting' sound
       io.to(code).emit("user-joined", { memberId });
-      
-      // Auto-pause if a completely new user joins
-      if (room.playback.playing) {
-        room.playback.playing = false;
-        room.playback.updatedAt = Date.now();
-        io.to(code).emit("playback-state", room.playback);
-      }
     }
 
     // Broadcast to everyone that the room member list updated
