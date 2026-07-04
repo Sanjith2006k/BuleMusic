@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo } from "react";
 import { usePlaylistStore } from "@/store/playlistStore";
 import { useSongStore } from "@/store/songStore";
 import { usePlaybackStore } from "@/store/playbackStore";
+import { usePlayerStore } from "@/store/playerStore";
 import useAudio from "@/hooks/useAudio";
 import GlassCard from "../ui/GlassCard";
 import Button from "../ui/Button";
