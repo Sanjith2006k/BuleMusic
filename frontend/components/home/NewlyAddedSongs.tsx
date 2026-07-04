@@ -49,7 +49,7 @@ export default function NewlyAddedSongs() {
   const handleAddToQueue = (e: React.MouseEvent, songId: string, title: string) => {
     e.stopPropagation();
     if (roomCode) {
-      const isAlreadyInQueue = queue.some(item => item.songId === songId);
+      const isAlreadyInQueue = queue.some(item => item.songId === songId && item.addedBy !== "System");
       if (isAlreadyInQueue) {
         toast.error("Song is already in the queue");
         return;

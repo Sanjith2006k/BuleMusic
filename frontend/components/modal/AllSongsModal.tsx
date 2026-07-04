@@ -86,7 +86,7 @@ export default function AllSongsModal({ open, onClose }: Props) {
   const handleAddToQueue = (e: React.MouseEvent, songId: string, title: string) => {
     e.stopPropagation(); // Prevent triggering handlePlaySong
     if (roomCode) {
-      const isAlreadyInQueue = queue.some(item => item.songId === songId);
+      const isAlreadyInQueue = queue.some(item => item.songId === songId && item.addedBy !== "System");
       if (isAlreadyInQueue) {
         toast.error("Song is already in the queue");
         return;

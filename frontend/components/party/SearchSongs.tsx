@@ -40,7 +40,7 @@ export default function SearchSongs() {
   }, [search, songs]);
 
   const handleAddToQueue = (songId: string) => {
-    const isAlreadyInQueue = queue.some(item => item.songId === songId);
+    const isAlreadyInQueue = queue.some(item => item.songId === songId && item.addedBy !== "System");
     if (isAlreadyInQueue) {
       toast.error("Song is already in the queue");
       return;
