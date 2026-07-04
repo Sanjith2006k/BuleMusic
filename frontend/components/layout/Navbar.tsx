@@ -2,6 +2,7 @@
 
 import { motion } from "framer-motion";
 import { Music2 } from "lucide-react";
+import Link from "next/link";
 
 import Container from "../ui/Container";
 import Button from "../ui/Button";
@@ -17,15 +18,17 @@ export default function Navbar() {
     >
       <Container>
         <div className="mt-5 flex h-16 items-center justify-between rounded-full border border-white/10 bg-white/5 px-6 backdrop-blur-2xl">
-          <div className="flex items-center gap-3">
+          <Link href="/" className="flex items-center gap-3 hover:opacity-85 transition-opacity">
             <div className="rounded-full bg-[#0A84FF]/20 p-2">
               <Music2 className="text-[#0A84FF]" size={22} />
             </div>
 
             <h1 className="text-lg font-semibold tracking-tight">{APP_NAME}</h1>
-          </div>
+          </Link>
 
-          <Button variant="secondary">About</Button>
+          <Link href="/about">
+            <Button variant="secondary">About</Button>
+          </Link>
         </div>
       </Container>
     </motion.header>

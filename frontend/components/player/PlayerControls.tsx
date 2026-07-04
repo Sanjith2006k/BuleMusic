@@ -21,10 +21,11 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
   const { playing, songId: currentSongId } = usePlaybackStore();
   const { userId, hostId, roomCode, activePlaylistId, playlistQueue, setPlaylistQueue } = useRoomStore();
   const playlists = usePlaylistStore((state) => state.playlists);
-  const { play, pause } = useAudio();
+  const { play, pause, audio } = useAudio();
   const socket = useSocket();
 
   const isHost = userId === hostId && hostId !== null;
+  const canControl = !roomCode || isHost;
 
   const handlePlayPause = () => {
     const currentState = usePlaybackStore.getState();
@@ -57,22 +58,46 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
   };
   
   const handleNext = () => {
-    if (!isHost) return;
-    socket.emit("play-next", { roomCode });
+    if (roomCode && !isHost) return;
     
-    // Also advance the local playlistQueue (remove the first item)
-    if (playlistQueue.length > 0) {
-      const newQueue = playlistQueue.slice(1);
-      setPlaylistQueue(newQueue);
+    if (roomCode) {
+      socket.emit("play-next", { roomCode });
+      // Also advance the local playlistQueue (remove the first item)
+      if (playlistQueue.length > 0) {
+        const newQueue = playlistQueue.slice(1);
+        setPlaylistQueue(newQueue);
+      }
+    } else {
+      if (playlistQueue.length > 0) {
+        let nextIndex = 0;
+        if (shuffle) {
+          nextIndex = Math.floor(Math.random() * playlistQueue.length);
+        }
+        const nextItem = playlistQueue[nextIndex];
+        const newQueue = playlistQueue.filter((_, i) => i !== nextIndex);
+        setPlaylistQueue(newQueue);
+        
+        usePlaybackStore.setState({
+          songId: nextItem.songId,
+          playing: true,
+          currentTime: 0,
+          updatedAt: Date.now()
+        });
+      }
     }
   };
   
   const handlePrevious = () => {
-    if (!isHost) return;
+    if (roomCode && !isHost) return;
+    if (audio) {
+      audio.currentTime = 0;
+    }
   };
 
   const handleToggleShuffle = () => {
-    if (!isHost || !activePlaylistId) {
+    if (!canControl) return;
+
+    if (!roomCode || !activePlaylistId) {
       toggleShuffle();
       return;
     }
@@ -122,7 +147,7 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
 
   if (mobileOnly) {
     return (
-      <div className={`flex items-center ${!isHost ? "opacity-50 pointer-events-none" : ""}`}>
+      <div className={`flex items-center ${!canControl ? "opacity-50 pointer-events-none" : ""}`}>
         <button
           onClick={handlePlayPause}
           className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0A84FF] shadow-lg shadow-[#0A84FF]/30 transition hover:scale-105"
@@ -134,10 +159,10 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
   }
 
   return (
-    <div className={`flex items-center gap-4 ${!isHost ? "opacity-50 pointer-events-none" : ""}`}>
+    <div className={`flex items-center gap-4 ${!canControl ? "opacity-50 pointer-events-none" : ""}`}>
       <button
         onClick={handleToggleShuffle}
-        disabled={!isHost}
+        disabled={!canControl}
         className={`transition ${shuffle ? "text-[#0A84FF]" : "text-zinc-400"}`}
       >
         <Shuffle size={18} />
@@ -146,7 +171,7 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
       <button 
         className="hover:scale-110 transition disabled:opacity-50"
         onClick={handlePrevious}
-        disabled={!isHost}
+        disabled={!canControl}
       >
         <SkipBack size={22} />
       </button>
@@ -161,14 +186,14 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
       <button 
         className="hover:scale-110 transition disabled:opacity-50"
         onClick={handleNext}
-        disabled={!isHost}
+        disabled={!canControl}
       >
         <SkipForward size={22} />
       </button>
 
       <button
         onClick={toggleRepeat}
-        disabled={!isHost}
+        disabled={!canControl}
         className={`transition ${repeat ? "text-[#0A84FF]" : "text-zinc-400"}`}
       >
         <Repeat2 size={18} />

@@ -66,8 +66,29 @@ export default function AudioProvider({ children }: Props) {
       setPlaybackPlaying(false);
       usePlayerStore.setState({ isPlaying: false });
       
-      const { userId, hostId, roomCode } = useRoomStore.getState();
+      const { userId, hostId, roomCode, playlistQueue, setPlaylistQueue } = useRoomStore.getState();
       const { shuffle } = usePlayerStore.getState();
+      
+      if (!roomCode) {
+        // Solo auto-play next song
+        if (playlistQueue.length > 0) {
+          let nextIndex = 0;
+          if (shuffle) {
+            nextIndex = Math.floor(Math.random() * playlistQueue.length);
+          }
+          const nextItem = playlistQueue[nextIndex];
+          const newQueue = playlistQueue.filter((_, i) => i !== nextIndex);
+          setPlaylistQueue(newQueue);
+          
+          usePlaybackStore.setState({
+            songId: nextItem.songId,
+            playing: true,
+            currentTime: 0,
+            updatedAt: Date.now()
+          });
+        }
+        return;
+      }
       
       if (userId === hostId && hostId !== null) {
         const songDuration = newAudio.duration;
@@ -78,8 +99,19 @@ export default function AudioProvider({ children }: Props) {
     };
 
     const handleCanPlay = () => {
+      const { roomCode } = useRoomStore.getState();
+      if (!roomCode) {
+        if (usePlaybackStore.getState().playing) {
+          newAudio.play().catch(e => {
+            console.error("Auto-play error on canplay:", e);
+            setAutoplayBlocked(true);
+          });
+        }
+        return;
+      }
+
       const targetTime = getTargetTime();
-      if (Math.abs(newAudio.currentTime - targetTime) > 0.5) {
+      if (Math.abs(newAudio.currentTime - targetTime) > 1.5) {
         newAudio.currentTime = targetTime;
       }
       if (usePlaybackStore.getState().playing) {
@@ -99,11 +131,14 @@ export default function AudioProvider({ children }: Props) {
     const driftInterval = setInterval(() => {
       if (!newAudio || newAudio.paused || !usePlaybackStore.getState().playing) return;
       
+      const { roomCode } = useRoomStore.getState();
+      if (!roomCode) return; // Solo playback needs no drift correction
+      
       const targetTime = getTargetTime();
       const drift = Math.abs(newAudio.currentTime - targetTime);
       
-      // If drift exceeds 200ms, force sync it (Spotify Jam threshold)
-      if (drift > 0.2) {
+      // If drift exceeds 1.5s, force sync it (Spotify Jam threshold is too aggressive for browser audio)
+      if (drift > 1.5) {
         console.log(`Correcting audio drift of ${drift.toFixed(3)}s`);
         newAudio.currentTime = targetTime;
       }
@@ -133,14 +168,27 @@ export default function AudioProvider({ children }: Props) {
     }
   }, [currentSongId, getSongById]);
 
-  // --- Reacting to server state changes (Play / Pause / Seek) ---
+  // --- Reacting to server/local state changes (Play / Pause / Seek) ---
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
+    const { roomCode } = useRoomStore.getState();
+    if (!roomCode) {
+      if (playing) {
+        audio.play().catch(e => {
+          console.error("Autoplay blocked:", e);
+          setAutoplayBlocked(true);
+        });
+      } else {
+        audio.pause();
+      }
+      return;
+    }
+
     if (playing) {
       const targetTime = getTargetTime();
-      if (Math.abs(audio.currentTime - targetTime) > 0.5) {
+      if (Math.abs(audio.currentTime - targetTime) > 1.5) {
         audio.currentTime = targetTime;
       }
       audio.play().catch(e => {
@@ -149,7 +197,7 @@ export default function AudioProvider({ children }: Props) {
       });
     } else {
       audio.pause();
-      if (Math.abs(audio.currentTime - serverCurrentTime) > 0.5) {
+      if (Math.abs(audio.currentTime - serverCurrentTime) > 1.5) {
         audio.currentTime = serverCurrentTime;
       }
     }
