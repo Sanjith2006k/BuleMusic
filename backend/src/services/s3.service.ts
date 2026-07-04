@@ -1,4 +1,4 @@
-import { S3Client, GetObjectCommand, ListObjectsV2Command } from "@aws-sdk/client-s3";
+import { S3Client, GetObjectCommand, ListObjectsV2Command, ListObjectsV2CommandOutput } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { env } from "../config/env";
 
@@ -41,13 +41,13 @@ export const s3Service = {
     let continuationToken: string | undefined = undefined;
 
     do {
-      const command = new ListObjectsV2Command({
+      const listCommand: ListObjectsV2Command = new ListObjectsV2Command({
         Bucket: env.S3_BUCKET_NAME,
         Prefix: "songs/",
         ContinuationToken: continuationToken,
       });
 
-      const response = await s3Client.send(command);
+      const response: ListObjectsV2CommandOutput = await s3Client.send(listCommand);
 
       if (response.Contents) {
         for (const obj of response.Contents) {
