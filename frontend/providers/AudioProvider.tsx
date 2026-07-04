@@ -235,6 +235,124 @@ export default function AudioProvider({ children }: Props) {
     return () => unsubscribe();
   }, []);
 
+  // --- MediaSession API ---
+  // This tells the OS "I'm actively playing media" which prevents the browser 
+  // from suspending JS execution. This is exactly how Spotify keeps working with screen off.
+  useEffect(() => {
+    if (!("mediaSession" in navigator)) return;
+    
+    const updateMediaSession = () => {
+      const state = usePlaybackStore.getState();
+      const songId = state.songId;
+      if (!songId) return;
+      
+      const song = useSongStore.getState().getSongById(songId);
+      if (!song) return;
+      
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: song.title || "Unknown Track",
+        artist: song.artist || "BuleMusic Party",
+        album: "BuleMusic",
+        artwork: song.cover ? [{ src: song.cover, sizes: "512x512", type: "image/jpeg" }] : [],
+      });
+      
+      navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
+    };
+    
+    // Update metadata whenever playback state changes
+    const unsubscribe = usePlaybackStore.subscribe((state) => {
+      updateMediaSession();
+    });
+    
+    updateMediaSession();
+    
+    return () => unsubscribe();
+  }, []);
+
+  // --- Visibility Change Re-Sync ---
+  // When the user turns the screen back on or switches to the tab,
+  // force an immediate re-sync with the server state.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        const audio = audioRef.current;
+        if (!audio) return;
+        
+        const { roomCode } = useRoomStore.getState();
+        if (!roomCode) return;
+        
+        // Force re-join to get fresh state from server
+        const { userId } = useRoomStore.getState();
+        const myName = useRoomStore.getState().members.find(m => m.id === userId)?.name;
+        
+        import("@/lib/socket").then(({ socket }) => {
+          socket.emit("join-room", {
+            code: roomCode,
+            memberId: userId,
+            name: myName || "Guest",
+          });
+        });
+        
+        // Also immediately apply current local playback state to audio element
+        // in case Zustand subscriber fired while JS was frozen
+        const state = usePlaybackStore.getState();
+        if (state.playing) {
+          const targetTime = state.currentTime + (state.updatedAt ? (Date.now() - state.updatedAt) / 1000 : 0);
+          if (Math.abs(audio.currentTime - targetTime) > 1.5) {
+            audio.currentTime = targetTime;
+          }
+          audio.play().catch(() => {});
+        } else {
+          audio.pause();
+        }
+      }
+    };
+    
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, []);
+
+  // --- Web Worker Keep-Alive ---
+  // A Web Worker that pings the main thread every 5s to reduce aggressive throttling
+  // on mobile browsers when the screen is off.
+  useEffect(() => {
+    let worker: Worker | null = null;
+    
+    try {
+      worker = new Worker("/keep-alive-worker.js");
+      worker.onmessage = () => {
+        // Each ping from the worker gives the main thread a chance to process
+        // any queued socket.io messages that arrived while throttled.
+        const audio = audioRef.current;
+        if (!audio) return;
+        
+        const { roomCode } = useRoomStore.getState();
+        if (!roomCode) return;
+        
+        const state = usePlaybackStore.getState();
+        if (state.playing && audio.paused) {
+          // Server says play but audio is paused — re-sync
+          const targetTime = state.currentTime + (state.updatedAt ? (Date.now() - state.updatedAt) / 1000 : 0);
+          audio.currentTime = targetTime;
+          audio.play().catch(() => {});
+        } else if (!state.playing && !audio.paused) {
+          // Server says pause but audio is playing — force pause
+          audio.pause();
+        }
+      };
+      worker.postMessage("start");
+    } catch (e) {
+      console.warn("Keep-alive worker not available:", e);
+    }
+    
+    return () => {
+      if (worker) {
+        worker.postMessage("stop");
+        worker.terminate();
+      }
+    };
+  }, []);
+
   // --- Exposed Audio Engine Functions for Local Overrides (Volume, etc) ---
   const play = async () => {}; // No-op: strictly controlled by server state now
   const pause = () => {}; // No-op
