@@ -271,10 +271,8 @@ export default function AudioProvider({ children }: Props) {
 
   // --- Visibility Change Re-Sync ---
   // When the user turns the screen back on or switches to the tab,
-  // IMMEDIATELY pause audio (since we can't know the true server state while frozen),
-  // then request fresh state from the server. The server response will resume playback
-  // if the host is still playing — this guarantees the phone stops the instant
-  // the user looks at it, rather than continuing for several more seconds out of sync.
+  // request fresh state from the server. The server response will update
+  // the Zustand store and automatically sync the audio element.
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -284,15 +282,9 @@ export default function AudioProvider({ children }: Props) {
         const { roomCode } = useRoomStore.getState();
         if (!roomCode) return;
         
-        // STEP 1: Immediately pause the audio. We don't know the real server state
-        // because JS was frozen while the screen was off. Pausing first prevents
-        // the user from hearing out-of-sync audio when they unlock the phone.
-        audio.pause();
-        
-        // STEP 2: Request fresh state from the server by re-joining.
+        // Request fresh state from the server by re-joining.
         // The server will respond with sync-initial-state which will update
-        // the Zustand store, and the Zustand subscriber will call syncAudio()
-        // with the correct state — resuming playback if the host is still playing.
+        // the Zustand store and sync the audio element.
         const { userId } = useRoomStore.getState();
         const myName = useRoomStore.getState().members.find(m => m.id === userId)?.name;
         
