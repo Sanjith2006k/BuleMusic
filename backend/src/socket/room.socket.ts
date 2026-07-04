@@ -97,8 +97,9 @@ export function registerRoomEvents(io: Server, socket: Socket) {
     if (code && memberId) {
       const timeoutKey = `${code}-${memberId}`;
       
-      // Wait 15 seconds before actually removing the user, giving them plenty of time to refresh 
-      // even if their browser or development server is slow to reload.
+      // Wait 60 seconds before actually removing the user.
+      // This generous timeout accommodates Android Doze mode reconnection delays
+      // where the socket may take up to 30s to reconnect after screen-off.
       const timeout = setTimeout(() => {
         roomService.leaveRoom(code, memberId);
         const room = roomService.getRoom(code);
@@ -107,7 +108,7 @@ export function registerRoomEvents(io: Server, socket: Socket) {
         }
         console.log(`${memberId} timed out and was removed from ${code}`);
         disconnectTimeouts.delete(timeoutKey);
-      }, 15000);
+      }, 60000);
       
       disconnectTimeouts.set(timeoutKey, timeout);
     }

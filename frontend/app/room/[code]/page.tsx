@@ -61,14 +61,7 @@ export default function RoomPage() {
     // Detect poor connection / disconnect
     const handleDisconnect = (reason: string) => {
       if (reason === "io server disconnect" || reason === "io client disconnect") return;
-      
-      // Warn the user about poor connection if it was an unintentional drop (e.g. ping timeout, transport error)
-      const isMobile = window.innerWidth <= 768; // simple mobile check
-      if (isMobile) {
-        alert("Low connection detected! Your music might fall out of sync. Please refresh the page to sync with the host.");
-      } else {
-        alert("Connection lost. Trying to reconnect...");
-      }
+      console.warn("Socket disconnected:", reason);
     };
     
     socket.on("disconnect", handleDisconnect);

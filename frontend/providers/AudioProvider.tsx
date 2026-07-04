@@ -1,12 +1,22 @@
 "use client";
 
-import { ReactNode, useEffect, useState, useRef, useCallback } from "react";
+/**
+ * AudioProvider (Frontend/Web Version) — Audio sync engine for BuleMusic web app.
+ * 
+ * This is the web/desktop browser version. On desktop browsers, background execution 
+ * is more permissive than mobile, so we rely on:
+ * 1. Web Audio API silent oscillator to keep the JS thread alive
+ * 2. MediaSession API to signal active media playback
+ * 3. Web Worker keep-alive pings
+ * 4. Visibility change resync as a safety net
+ */
+
+import { ReactNode, useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { AudioContext } from "@/context/AudioContext";
 import { usePlaybackStore } from "@/store/playbackStore";
 import { usePlayerStore } from "@/store/playerStore";
 import { useRoomStore } from "@/store/roomStore";
 import { useSongStore } from "@/store/songStore";
-import { Play } from "lucide-react";
 
 interface Props {
   children: ReactNode;
@@ -15,7 +25,6 @@ interface Props {
 export default function AudioProvider({ children }: Props) {
   const [audio, setAudio] = useState<HTMLAudioElement | null>(null);
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const [autoplayBlocked, setAutoplayBlocked] = useState(false);
 
   // Sync state
   const playing = usePlaybackStore((state) => state.playing);
@@ -31,7 +40,6 @@ export default function AudioProvider({ children }: Props) {
 
   const getSongById = useSongStore((state) => state.getSongById);
 
-  // Helper to calculate the exact millisecond we should be at based on server time
   const getTargetTime = useCallback(() => {
     const { playing: isPlaying, currentTime, updatedAt: lastUpdated } = usePlaybackStore.getState();
     if (isPlaying && lastUpdated) {
@@ -43,6 +51,40 @@ export default function AudioProvider({ children }: Props) {
 
   // --- Core Sync Engine ---
   useEffect(() => {
+    // Silent oscillator keep-alive for desktop browsers
+    let audioCtx: AudioContext | null = null;
+    let keepAliveStarted = false;
+
+    const startKeepAlive = () => {
+      if (keepAliveStarted) return;
+      try {
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        if (!AudioContextClass) return;
+        
+        audioCtx = new AudioContextClass();
+        const oscillator = audioCtx.createOscillator();
+        const gainNode = audioCtx.createGain();
+        gainNode.gain.value = 0;
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioCtx.destination);
+        oscillator.start();
+        
+        if (audioCtx.state === "suspended") {
+          audioCtx.resume();
+        }
+        
+        keepAliveStarted = true;
+        document.removeEventListener("click", startKeepAlive);
+        document.removeEventListener("touchstart", startKeepAlive);
+      } catch (e) {
+        console.warn("[AudioProvider] Web Audio keep-alive failed:", e);
+      }
+    };
+    
+    document.addEventListener("click", startKeepAlive);
+    document.addEventListener("touchstart", startKeepAlive);
+
     const newAudio = new Audio();
     audioRef.current = newAudio;
     setAudio(newAudio);
@@ -57,9 +99,8 @@ export default function AudioProvider({ children }: Props) {
     };
 
     const handleEnded = () => {
-      // Protection against browsers firing `ended` prematurely due to buffer drops
       if (newAudio.duration && newAudio.currentTime < newAudio.duration - 1) {
-        console.warn("Browser fired ended prematurely! Ignoring to prevent skip bug.");
+        console.warn("[AudioProvider] Premature ended event — ignoring");
         return;
       }
       
@@ -70,7 +111,6 @@ export default function AudioProvider({ children }: Props) {
       const { shuffle } = usePlayerStore.getState();
       
       if (!roomCode) {
-        // Solo auto-play next song
         if (playlistQueue.length > 0) {
           let nextIndex = 0;
           if (shuffle) {
@@ -103,21 +143,19 @@ export default function AudioProvider({ children }: Props) {
       if (!roomCode) {
         if (usePlaybackStore.getState().playing) {
           newAudio.play().catch(e => {
-            console.error("Auto-play error on canplay:", e);
-            setAutoplayBlocked(true);
+            console.warn("[AudioProvider] Autoplay blocked:", e);
           });
         }
         return;
       }
 
       const targetTime = getTargetTime();
-      if (Math.abs(newAudio.currentTime - targetTime) > 1.5) {
+      if (Math.abs(newAudio.currentTime - targetTime) > 1.0) {
         newAudio.currentTime = targetTime;
       }
       if (usePlaybackStore.getState().playing) {
         newAudio.play().catch(e => {
-          console.error("Auto-play error on canplay:", e);
-          setAutoplayBlocked(true);
+          console.warn("[AudioProvider] Autoplay blocked:", e);
         });
       }
     };
@@ -127,19 +165,17 @@ export default function AudioProvider({ children }: Props) {
     newAudio.addEventListener("ended", handleEnded);
     newAudio.addEventListener("canplay", handleCanPlay);
 
-    // Periodic Drift Corrector (Runs every 2 seconds)
+    // Drift corrector
     const driftInterval = setInterval(() => {
       if (!newAudio || newAudio.paused || !usePlaybackStore.getState().playing) return;
-      
       const { roomCode } = useRoomStore.getState();
-      if (!roomCode) return; // Solo playback needs no drift correction
+      if (!roomCode) return;
       
       const targetTime = getTargetTime();
       const drift = Math.abs(newAudio.currentTime - targetTime);
       
-      // If drift exceeds 1.5s, force sync it (Spotify Jam threshold is too aggressive for browser audio)
       if (drift > 1.5) {
-        console.log(`Correcting audio drift of ${drift.toFixed(3)}s`);
+        console.log(`[AudioProvider] Drift correction: ${drift.toFixed(2)}s`);
         newAudio.currentTime = targetTime;
       }
     }, 2000);
@@ -152,6 +188,12 @@ export default function AudioProvider({ children }: Props) {
       clearInterval(driftInterval);
       newAudio.pause();
       newAudio.src = "";
+      
+      if (audioCtx && audioCtx.state !== "closed") {
+        audioCtx.close();
+      }
+      document.removeEventListener("click", startKeepAlive);
+      document.removeEventListener("touchstart", startKeepAlive);
     };
   }, [setPlaybackTime, setPlaybackDuration, setPlaybackPlaying, initialVolume, getTargetTime]);
 
@@ -168,7 +210,7 @@ export default function AudioProvider({ children }: Props) {
     }
   }, [currentSongId, getSongById]);
 
-  // --- Reacting to server/local state changes (Play / Pause / Seek) ---
+  // --- Reacting to server/local state changes ---
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
@@ -178,10 +220,7 @@ export default function AudioProvider({ children }: Props) {
       
       if (!roomCode) {
         if (state.playing) {
-          audio.play().catch(e => {
-            console.error("Autoplay blocked:", e);
-            setAutoplayBlocked(true);
-          });
+          audio.play().catch(e => console.warn("[AudioProvider] Autoplay blocked:", e));
         } else {
           audio.pause();
         }
@@ -190,24 +229,18 @@ export default function AudioProvider({ children }: Props) {
 
       if (state.playing) {
         const targetTime = state.currentTime + (state.updatedAt ? (Date.now() - state.updatedAt) / 1000 : 0);
-        if (Math.abs(audio.currentTime - targetTime) > 1.5) {
+        if (Math.abs(audio.currentTime - targetTime) > 1.0) {
           audio.currentTime = targetTime;
         }
-        audio.play().catch(e => {
-          console.error("Autoplay blocked:", e);
-          setAutoplayBlocked(true);
-        });
+        audio.play().catch(e => console.warn("[AudioProvider] Autoplay blocked:", e));
       } else {
         audio.pause();
-        if (Math.abs(audio.currentTime - state.currentTime) > 1.5) {
+        if (Math.abs(audio.currentTime - state.currentTime) > 1.0) {
           audio.currentTime = state.currentTime;
         }
       }
     };
 
-    // Use Zustand subscribe to instantly react to playback state changes, 
-    // bypassing React's rendering throttle when the tab is in the background or locked!
-    
     let prevPlaying = usePlaybackStore.getState().playing;
     let prevUpdatedAt = usePlaybackStore.getState().updatedAt;
     let prevCurrentTime = usePlaybackStore.getState().currentTime;
@@ -229,66 +262,57 @@ export default function AudioProvider({ children }: Props) {
       }
     });
 
-    // Run once on mount to catch the initial state
     syncAudio(usePlaybackStore.getState());
-
     return () => unsubscribe();
   }, []);
 
   // --- MediaSession API ---
-  // This tells the OS "I'm actively playing media" which prevents the browser 
-  // from suspending JS execution. This is exactly how Spotify keeps working with screen off.
   useEffect(() => {
     if (!("mediaSession" in navigator)) return;
     
     const updateMediaSession = () => {
-      const state = usePlaybackStore.getState();
-      const songId = state.songId;
-      if (!songId) return;
-      
-      const song = useSongStore.getState().getSongById(songId);
-      if (!song) return;
-      
-      navigator.mediaSession.metadata = new MediaMetadata({
-        title: song.title || "Unknown Track",
-        artist: song.artist || "BuleMusic Party",
-        album: "BuleMusic",
-        artwork: song.cover ? [{ src: song.cover, sizes: "512x512", type: "image/jpeg" }] : [],
-      });
-      
-      navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
+      try {
+        const state = usePlaybackStore.getState();
+        const songId = state.songId;
+        if (!songId) return;
+        
+        const song = useSongStore.getState().getSongById(songId);
+        if (!song) return;
+        
+        navigator.mediaSession.metadata = new MediaMetadata({
+          title: song.title || "Unknown Track",
+          artist: song.artist || "BuleMusic Party",
+          album: "BuleMusic",
+          artwork: song.cover ? [{ src: song.cover, sizes: "512x512", type: "image/jpeg" }] : [],
+        });
+        
+        navigator.mediaSession.playbackState = state.playing ? "playing" : "paused";
+      } catch (e) {
+        // Ignore MediaSession errors
+      }
     };
     
-    // Update metadata whenever playback state changes
-    const unsubscribe = usePlaybackStore.subscribe((state) => {
-      updateMediaSession();
-    });
-    
+    const unsubscribe = usePlaybackStore.subscribe(() => updateMediaSession());
     updateMediaSession();
-    
     return () => unsubscribe();
   }, []);
 
   // --- Visibility Change Re-Sync ---
-  // When the user turns the screen back on or switches to the tab,
-  // request fresh state from the server. The server response will update
-  // the Zustand store and automatically sync the audio element.
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
         const audio = audioRef.current;
         if (!audio) return;
         
-        const { roomCode } = useRoomStore.getState();
+        const { roomCode, userId, members } = useRoomStore.getState();
         if (!roomCode) return;
         
-        // Request fresh state from the server by re-joining.
-        // The server will respond with sync-initial-state which will update
-        // the Zustand store and sync the audio element.
-        const { userId } = useRoomStore.getState();
-        const myName = useRoomStore.getState().members.find(m => m.id === userId)?.name;
+        const myName = members.find(m => m.id === userId)?.name;
         
         import("@/lib/socket").then(({ socket }) => {
+          if (!socket.connected) {
+            socket.connect();
+          }
           socket.emit("join-room", {
             code: roomCode,
             memberId: userId,
@@ -303,16 +327,12 @@ export default function AudioProvider({ children }: Props) {
   }, []);
 
   // --- Web Worker Keep-Alive ---
-  // A Web Worker that pings the main thread every 5s to reduce aggressive throttling
-  // on mobile browsers when the screen is off.
   useEffect(() => {
     let worker: Worker | null = null;
     
     try {
       worker = new Worker("/keep-alive-worker.js");
       worker.onmessage = () => {
-        // Each ping from the worker gives the main thread a chance to process
-        // any queued socket.io messages that arrived while throttled.
         const audio = audioRef.current;
         if (!audio) return;
         
@@ -321,18 +341,16 @@ export default function AudioProvider({ children }: Props) {
         
         const state = usePlaybackStore.getState();
         if (state.playing && audio.paused) {
-          // Server says play but audio is paused — re-sync
           const targetTime = state.currentTime + (state.updatedAt ? (Date.now() - state.updatedAt) / 1000 : 0);
           audio.currentTime = targetTime;
           audio.play().catch(() => {});
         } else if (!state.playing && !audio.paused) {
-          // Server says pause but audio is playing — force pause
           audio.pause();
         }
       };
       worker.postMessage("start");
     } catch (e) {
-      console.warn("Keep-alive worker not available:", e);
+      console.warn("[AudioProvider] Keep-alive worker not available:", e);
     }
     
     return () => {
@@ -343,51 +361,38 @@ export default function AudioProvider({ children }: Props) {
     };
   }, []);
 
-  // --- Exposed Audio Engine Functions for Local Overrides (Volume, etc) ---
-  const play = async () => {}; // No-op: strictly controlled by server state now
-  const pause = () => {}; // No-op
-  const seek = (time: number) => {}; // No-op
+  // --- Exposed Audio Engine Functions ---
+  const play = useCallback(async () => {}, []);
+  const pause = useCallback(() => {}, []);
+  const seek = useCallback((time: number) => {}, []);
 
-  const loadSong = (url: string) => {
+  const loadSong = useCallback((url: string) => {
     if (audioRef.current) {
       audioRef.current.src = url;
       audioRef.current.load();
     }
-  };
+  }, []);
 
-  const setVolumeLevel = (vol: number) => {
+  const setVolumeLevel = useCallback((vol: number) => {
     if (audioRef.current) {
       audioRef.current.volume = vol / 100;
       setPlaybackVolume(vol);
       usePlayerStore.setState({ volume: vol });
     }
-  };
+  }, [setPlaybackVolume]);
 
-  const handleResolveAutoplay = () => {
-    setAutoplayBlocked(false);
-    if (audioRef.current && usePlaybackStore.getState().playing) {
-      audioRef.current.currentTime = getTargetTime();
-      audioRef.current.play();
-    }
-  };
+  const contextValue = useMemo(() => ({
+    audio,
+    play,
+    pause,
+    seek,
+    loadSong,
+    setVolume: setVolumeLevel
+  }), [audio, play, pause, seek, loadSong, setVolumeLevel]);
 
   return (
-    <AudioContext.Provider value={{ audio, play, pause, seek, loadSong, setVolume: setVolumeLevel }}>
+    <AudioContext.Provider value={contextValue}>
       {children}
-      {autoplayBlocked && (
-        <div 
-          onClick={handleResolveAutoplay}
-          className="fixed inset-0 z-[9999] bg-black/60 backdrop-blur-sm flex items-center justify-center cursor-pointer transition-opacity"
-        >
-          <div className="bg-[#1a1a1a] p-8 rounded-2xl border border-white/10 shadow-2xl flex flex-col items-center max-w-sm mx-4 text-center">
-            <div className="w-16 h-16 bg-[#0A84FF] rounded-full flex items-center justify-center mb-6 shadow-lg shadow-[#0A84FF]/20 animate-pulse">
-              <Play fill="white" size={32} className="ml-1" />
-            </div>
-            <h2 className="text-2xl font-bold mb-2">Tap to Sync</h2>
-            <p className="text-zinc-400">Your browser paused the audio. Tap anywhere to join the party perfectly in sync.</p>
-          </div>
-        </div>
-      )}
     </AudioContext.Provider>
   );
 }
