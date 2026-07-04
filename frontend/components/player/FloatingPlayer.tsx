@@ -154,12 +154,9 @@ export default function FloatingPlayer() {
             <ProgressBar />
           </div>
 
-          {/* Mobile Play/Pause Button (Re-using logic from PlayerControls) */}
-          <div className="lg:hidden ml-4">
-             {/* This will just render the play/pause button for mobile from PlayerControls later, or we can just render it here. */}
-             <div className="scale-75 origin-right">
-                <PlayerControls mobileOnly />
-             </div>
+          {/* Mobile Full Controls (Play/Pause, Next, Prev, Shuffle) */}
+          <div className="lg:hidden ml-2 shrink-0">
+            <PlayerControls mobileOnly />
           </div>
 
           {/* Actions */}

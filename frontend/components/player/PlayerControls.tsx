@@ -158,12 +158,36 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
 
   if (mobileOnly) {
     return (
-      <div className={`flex items-center ${!canControl ? "opacity-50 pointer-events-none" : ""}`}>
+      <div className={`flex items-center gap-2 ${!canControl ? "opacity-50 pointer-events-none" : ""}`}>
+        <button
+          onClick={handleToggleShuffle}
+          disabled={!canControl}
+          className={`transition ${shuffle ? "text-[#0A84FF]" : "text-zinc-400"}`}
+        >
+          <Shuffle size={16} />
+        </button>
+
+        <button 
+          className="hover:scale-110 transition disabled:opacity-50"
+          onClick={handlePrevious}
+          disabled={!canControl}
+        >
+          <SkipBack size={18} />
+        </button>
+
         <button
           onClick={handlePlayPause}
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-[#0A84FF] shadow-lg shadow-[#0A84FF]/30 transition hover:scale-105"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0A84FF] shadow-lg shadow-[#0A84FF]/30 transition hover:scale-105"
         >
-          {playing ? <Pause fill="white" size={20} /> : <Play fill="white" size={20} />}
+          {playing ? <Pause fill="white" size={16} /> : <Play fill="white" size={16} className="ml-0.5" />}
+        </button>
+
+        <button 
+          className="hover:scale-110 transition disabled:opacity-50"
+          onClick={handleNext}
+          disabled={!canControl}
+        >
+          <SkipForward size={18} />
         </button>
       </div>
     );
