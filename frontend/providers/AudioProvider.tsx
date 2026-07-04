@@ -271,7 +271,10 @@ export default function AudioProvider({ children }: Props) {
 
   // --- Visibility Change Re-Sync ---
   // When the user turns the screen back on or switches to the tab,
-  // force an immediate re-sync with the server state.
+  // IMMEDIATELY pause audio (since we can't know the true server state while frozen),
+  // then request fresh state from the server. The server response will resume playback
+  // if the host is still playing — this guarantees the phone stops the instant
+  // the user looks at it, rather than continuing for several more seconds out of sync.
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === "visible") {
@@ -281,7 +284,15 @@ export default function AudioProvider({ children }: Props) {
         const { roomCode } = useRoomStore.getState();
         if (!roomCode) return;
         
-        // Force re-join to get fresh state from server
+        // STEP 1: Immediately pause the audio. We don't know the real server state
+        // because JS was frozen while the screen was off. Pausing first prevents
+        // the user from hearing out-of-sync audio when they unlock the phone.
+        audio.pause();
+        
+        // STEP 2: Request fresh state from the server by re-joining.
+        // The server will respond with sync-initial-state which will update
+        // the Zustand store, and the Zustand subscriber will call syncAudio()
+        // with the correct state — resuming playback if the host is still playing.
         const { userId } = useRoomStore.getState();
         const myName = useRoomStore.getState().members.find(m => m.id === userId)?.name;
         
@@ -292,19 +303,6 @@ export default function AudioProvider({ children }: Props) {
             name: myName || "Guest",
           });
         });
-        
-        // Also immediately apply current local playback state to audio element
-        // in case Zustand subscriber fired while JS was frozen
-        const state = usePlaybackStore.getState();
-        if (state.playing) {
-          const targetTime = state.currentTime + (state.updatedAt ? (Date.now() - state.updatedAt) / 1000 : 0);
-          if (Math.abs(audio.currentTime - targetTime) > 1.5) {
-            audio.currentTime = targetTime;
-          }
-          audio.play().catch(() => {});
-        } else {
-          audio.pause();
-        }
       }
     };
     
