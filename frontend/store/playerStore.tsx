@@ -10,6 +10,7 @@ interface PlayerState {
 
   togglePlay: () => void;
   toggleShuffle: () => void;
+  setShuffle: (val: boolean) => void;
   toggleRepeat: () => void;
   setVolume: (volume: number) => void;
 }
@@ -29,6 +30,11 @@ export const usePlayerStore = create<PlayerState>((set) => ({
     set((state) => ({
       shuffle: !state.shuffle,
     })),
+
+  setShuffle: (val: boolean) =>
+    set({
+      shuffle: val,
+    }),
 
   toggleRepeat: () =>
     set((state) => ({

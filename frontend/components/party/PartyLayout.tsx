@@ -32,9 +32,15 @@ export default function PartyLayout() {
           <PartyHeader />
 
           <div className="mt-6 md:mt-10 grid gap-8 lg:grid-cols-[1.4fr_420px]">
-            <div className="space-y-6 md:space-y-8 min-w-0">
+            {/* Left Column (Desktop) / Main Column (Mobile) */}
+            <div className="flex flex-col gap-6 md:gap-8 min-w-0">
               <div className="rounded-3xl border border-white/10 bg-white/5 p-4 shadow-2xl backdrop-blur-xl">
                 <NowPlaying />
+              </div>
+
+              {/* Mobile-only Up Next (Shown directly after Now Playing) */}
+              <div className="block lg:hidden">
+                {showUpNext && <PlaylistUpNext />}
               </div>
 
               {/* Mobile-only Show All Songs Button */}
@@ -53,10 +59,14 @@ export default function PartyLayout() {
               <NewlyAddedSongs />
             </div>
 
-            <div className="space-y-6 md:space-y-8 min-w-0">
+            {/* Right Column (Desktop) */}
+            <div className="flex flex-col gap-6 md:gap-8 min-w-0">
               <MemberList />
 
-              {showUpNext && <PlaylistUpNext />}
+              {/* Desktop-only Up Next */}
+              <div className="hidden lg:block">
+                {showUpNext && <PlaylistUpNext />}
+              </div>
               
               <SearchSongs />
             </div>

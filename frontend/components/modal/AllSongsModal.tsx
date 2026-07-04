@@ -113,6 +113,8 @@ export default function AllSongsModal({ open, onClose }: Props) {
       addedBy: "System"
     }));
 
+    usePlayerStore.getState().setShuffle(true);
+    
     // For "All Songs", we can clear the active playlist ID so it doesn't try to unshuffle to a playlist
     useRoomStore.getState().setActivePlaylistId(null);
     useRoomStore.getState().setPlaylistQueue(upcomingItems);

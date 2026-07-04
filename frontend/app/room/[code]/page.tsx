@@ -8,6 +8,7 @@ import useSocket from "@/hooks/useSocket";
 import useAudio from "@/hooks/useAudio";
 import { usePlaybackStore } from "@/store/playbackStore";
 import { useRoomStore } from "@/store/roomStore";
+import { useSongStore } from "@/store/songStore";
 
 export default function RoomPage() {
   const socket = useSocket();
@@ -25,8 +26,18 @@ export default function RoomPage() {
   useEffect(() => {
     const unsubHydrate = useRoomStore.persist.onFinishHydration(() => setHasHydrated(true));
     setHasHydrated(useRoomStore.persist.hasHydrated());
+    
+    if (socket) {
+      socket.on("songs-refreshed", () => {
+        useSongStore.getState().fetchSongs();
+      });
+    }
+    
     return () => {
       unsubHydrate();
+      if (socket) {
+        socket.off("songs-refreshed");
+      }
     };
   }, []);
 

@@ -64,11 +64,12 @@ export default function PlaylistSection() {
       });
       // Force local playback instantly for the member who clicked
       usePlaybackStore.setState({ songId: songsToQueue[0], playing: true });
-      setTimeout(play, 100);
+      usePlayerStore.getState().setShuffle(true);
     } else {
       usePlaybackStore.setState({ songId: songsToQueue[0], playing: true });
-      setTimeout(play, 100);
+      usePlayerStore.getState().setShuffle(false);
     }
+    setTimeout(play, 100);
   };
 
   // All songs NOT in the expanded playlist — shown directly, no search needed

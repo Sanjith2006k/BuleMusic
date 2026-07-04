@@ -64,14 +64,12 @@ export default function PlaylistUpNext() {
   const systemQueue = playlistQueue.filter((item) => item.addedBy === "System");
 
   const handleUserQueueReorder = (newOrder: typeof playlistQueue) => {
-    if (!isHost) return;
     const combined = [...newOrder, ...systemQueue];
     setPlaylistQueue(combined);
     if (roomCode) socket.emit("set-queue", { roomCode, queue: combined });
   };
 
   const handleSystemQueueReorder = (newOrder: typeof playlistQueue) => {
-    if (!isHost) return;
     const combined = [...userQueue, ...newOrder];
     setPlaylistQueue(combined);
     if (roomCode) socket.emit("set-queue", { roomCode, queue: combined });
@@ -85,16 +83,14 @@ export default function PlaylistUpNext() {
       <Reorder.Item
         key={item.id}
         value={item}
-        dragListener={isHost} // Only host can drag
+        dragListener={true} // Anyone can drag
         onDragStart={() => setIsDragging(true)}
         onDragEnd={() => setTimeout(() => setIsDragging(false), 200)}
-        className={`flex items-center gap-3 rounded-xl p-2.5 transition border border-white/5 bg-white/5 hover:bg-white/10 ${
-          (isHost || !roomCode) ? "cursor-pointer" : ""
-        }`}
+        className={`flex items-center gap-3 rounded-xl p-2.5 transition border border-white/5 bg-white/5 hover:bg-white/10 cursor-pointer`}
         onClick={() => handlePlayFromQueue(globalIndex, song.id)}
       >
         <div className="flex w-5 justify-center shrink-0">
-          {isHost ? (
+          {(isHost || roomCode) ? (
             <GripVertical size={14} className="text-zinc-600 cursor-grab active:cursor-grabbing hover:text-white transition" />
           ) : (
             <span className="text-xs text-zinc-600">{globalIndex + 1}</span>

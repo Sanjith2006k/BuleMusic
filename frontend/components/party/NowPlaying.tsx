@@ -9,6 +9,7 @@ import GlassCard from "../ui/GlassCard";
 import Waveform from "../player/Waveform";
 import { usePlaybackStore } from "@/store/playbackStore";
 import { useSongStore } from "@/store/songStore";
+import { useRoomStore } from "@/store/roomStore";
 
 export default function NowPlaying() {
   const playing = usePlaybackStore((state) => state.playing);
@@ -41,6 +42,12 @@ export default function NowPlaying() {
       // Refresh global store
       await fetchSongs();
       toast.success("Song title updated!");
+      
+      const { roomCode } = useRoomStore.getState();
+      const socket = require("@/lib/socket").socket;
+      if (roomCode && socket) {
+        socket.emit("song-renamed", { roomCode });
+      }
     } catch (err) {
       toast.error("Could not update song name");
     }

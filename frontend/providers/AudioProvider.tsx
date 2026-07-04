@@ -174,7 +174,10 @@ export default function AudioProvider({ children }: Props) {
       const targetTime = getTargetTime();
       const drift = Math.abs(newAudio.currentTime - targetTime);
       
-      if (drift > 1.5) {
+      // Don't forcefully seek if we're essentially at the end of the song (prevents replay loop)
+      const isNearEnd = newAudio.duration && newAudio.currentTime >= newAudio.duration - 0.5;
+      
+      if (drift > 1.0 && !isNearEnd) {
         console.log(`[AudioProvider] Drift correction: ${drift.toFixed(2)}s`);
         newAudio.currentTime = targetTime;
       }
@@ -197,18 +200,8 @@ export default function AudioProvider({ children }: Props) {
     };
   }, [setPlaybackTime, setPlaybackDuration, setPlaybackPlaying, initialVolume, getTargetTime]);
 
-  // --- Source loading ---
-  useEffect(() => {
-    if (currentSongId && audioRef.current) {
-      const song = getSongById(currentSongId);
-      if (song && song.url) {
-        if (audioRef.current.src !== song.url) {
-          audioRef.current.src = song.url;
-          audioRef.current.load();
-        }
-      }
-    }
-  }, [currentSongId, getSongById]);
+  // Source Loading is now handled synchronously in the Zustand subscriber below
+  // to ensure background execution when the tab is out of focus.
 
   // --- Reacting to server/local state changes ---
   useEffect(() => {
@@ -229,10 +222,15 @@ export default function AudioProvider({ children }: Props) {
 
       if (state.playing) {
         const targetTime = state.currentTime + (state.updatedAt ? (Date.now() - state.updatedAt) / 1000 : 0);
-        if (Math.abs(audio.currentTime - targetTime) > 1.0) {
+        const isNearEnd = audio.duration && audio.currentTime >= audio.duration - 0.5;
+
+        if (Math.abs(audio.currentTime - targetTime) > 1.0 && !isNearEnd) {
           audio.currentTime = targetTime;
         }
-        audio.play().catch(e => console.warn("[AudioProvider] Autoplay blocked:", e));
+
+        if (!isNearEnd) {
+          audio.play().catch(e => console.warn("[AudioProvider] Party play error:", e));
+        }
       } else {
         audio.pause();
         if (Math.abs(audio.currentTime - state.currentTime) > 1.0) {
@@ -253,6 +251,16 @@ export default function AudioProvider({ children }: Props) {
         state.currentTime !== prevCurrentTime ||
         state.songId !== prevSongId
       ) {
+        // Did the song ID change? Load the new source immediately!
+        if (state.songId && state.songId !== prevSongId) {
+          const song = useSongStore.getState().getSongById(state.songId);
+          if (song && song.url && audio.src !== song.url) {
+            console.log(`[AudioProvider] Background loading song: ${song.title}`);
+            audio.src = song.url;
+            audio.load();
+          }
+        }
+
         prevPlaying = state.playing;
         prevUpdatedAt = state.updatedAt;
         prevCurrentTime = state.currentTime;

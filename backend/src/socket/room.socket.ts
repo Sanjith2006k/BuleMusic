@@ -113,4 +113,9 @@ export function registerRoomEvents(io: Server, socket: Socket) {
       disconnectTimeouts.set(timeoutKey, timeout);
     }
   });
+
+  socket.on("song-renamed", () => {
+    // Broadcast globally so all clients know to refresh their songs
+    io.emit("songs-refreshed");
+  });
 }
