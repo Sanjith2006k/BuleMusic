@@ -26,7 +26,13 @@ export const useSongStore = create<SongState>((set, get) => ({
   fetchSongs: async () => {
     set({ isLoading: true, error: null });
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs`);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/songs`, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        }
+      });
       if (!response.ok) {
         throw new Error("Failed to fetch songs");
       }

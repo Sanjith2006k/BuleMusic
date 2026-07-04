@@ -17,8 +17,6 @@ export default function ProgressBar() {
   const progress = duration > 0 ? (uiCurrentTime / duration) * 100 : 0;
 
   const handleSeek = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (!isHost) return;
-    
     const rect = e.currentTarget.getBoundingClientRect();
     const clickX = e.clientX - rect.left;
     const percentage = clickX / rect.width;

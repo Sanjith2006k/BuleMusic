@@ -25,7 +25,7 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
   const socket = useSocket();
 
   const isHost = userId === hostId && hostId !== null;
-  const canControl = !roomCode || isHost;
+  const canControl = true; // Everyone can control playback
 
   const handlePlayPause = () => {
     const currentState = usePlaybackStore.getState();
@@ -42,35 +42,28 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
     }
 
     if (playing) {
-      if (isHost) {
+      if (roomCode) {
         socket.emit("pause", { 
           roomCode, 
           currentTime: realCurrentTime 
         });
       } else {
-        // Only host can pause in a party, or if offline
-        if (!roomCode) {
-          usePlaybackStore.setState({ playing: false, updatedAt: Date.now() });
-        }
+        usePlaybackStore.setState({ playing: false, updatedAt: Date.now() });
       }
     } else {
-      if (isHost) {
+      if (roomCode) {
         socket.emit("play", {
           roomCode,
           currentTime: realCurrentTime,
           songId: currentState.songId
         });
       } else {
-        if (!roomCode) {
-          usePlaybackStore.setState({ playing: true, updatedAt: Date.now() });
-        }
+        usePlaybackStore.setState({ playing: true, updatedAt: Date.now() });
       }
     }
   };
   
   const handleNext = () => {
-    if (roomCode && !isHost) return;
-    
     if (roomCode) {
       socket.emit("play-next", { roomCode });
       // Also advance the local playlistQueue (remove the first item)
@@ -99,9 +92,14 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
   };
   
   const handlePrevious = () => {
-    if (roomCode && !isHost) return;
     if (audio) {
       audio.currentTime = 0;
+      if (roomCode) {
+        socket.emit("seek", {
+          roomCode,
+          currentTime: 0
+        });
+      }
     }
   };
 

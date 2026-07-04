@@ -82,7 +82,6 @@ export const s3Service = {
     do {
       const listCommand: ListObjectsV2Command = new ListObjectsV2Command({
         Bucket: env.S3_BUCKET_NAME,
-        Prefix: "songs/",
         ContinuationToken: continuationToken,
       });
 

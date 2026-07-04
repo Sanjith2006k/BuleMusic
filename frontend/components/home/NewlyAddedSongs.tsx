@@ -27,8 +27,6 @@ export default function NewlyAddedSongs() {
   }, [songs]);
 
   const handlePlaySong = (songId: string) => {
-    if (!isHost && roomCode) return;
-
     if (roomCode) {
       socket.emit("play", {
         roomCode,
@@ -78,9 +76,7 @@ export default function NewlyAddedSongs() {
           <div
             key={song.id}
             onClick={() => handlePlaySong(song.id)}
-            className={`group relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 p-4 transition-all hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 ${
-              (isHost || !roomCode) ? "cursor-pointer" : "opacity-75 cursor-not-allowed"
-            }`}
+            className={`group relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 p-4 transition-all hover:bg-white/10 hover:border-white/20 hover:-translate-y-1 cursor-pointer`}
           >
             <div className="relative aspect-square w-full overflow-hidden rounded-xl bg-black/50 mb-4 shadow-md">
               <Image
@@ -91,13 +87,11 @@ export default function NewlyAddedSongs() {
               />
               
               {/* Play overlay overlay */}
-              {(isHost || !roomCode) && (
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
+              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-[2px]">
                   <div className="bg-[#0A84FF] rounded-full p-3 transform translate-y-4 group-hover:translate-y-0 transition-all duration-300 shadow-lg shadow-[#0A84FF]/40">
                     <Play fill="white" size={20} className="ml-1 text-white" />
                   </div>
                 </div>
-              )}
             </div>
 
             <div className="flex items-start justify-between gap-3">

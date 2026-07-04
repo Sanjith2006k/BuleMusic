@@ -52,7 +52,7 @@ export default function PlaylistSection() {
     setActivePlaylistId(playlistId);
     setPlaylistQueue(upcomingItems);
 
-    if (roomCode && isHost) {
+    if (roomCode) {
       // Set the upcoming queue in backend
       socket.emit("set-queue", { roomCode, queue: upcomingItems });
       
@@ -62,10 +62,10 @@ export default function PlaylistSection() {
         currentTime: 0,
         songId: songsToQueue[0]
       });
-      // Force local playback instantly for the host
+      // Force local playback instantly for the member who clicked
       usePlaybackStore.setState({ songId: songsToQueue[0], playing: true });
       setTimeout(play, 100);
-    } else if (!roomCode) {
+    } else {
       usePlaybackStore.setState({ songId: songsToQueue[0], playing: true });
       setTimeout(play, 100);
     }

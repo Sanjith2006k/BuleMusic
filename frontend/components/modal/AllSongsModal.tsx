@@ -63,8 +63,6 @@ export default function AllSongsModal({ open, onClose }: Props) {
   };
 
   const handlePlaySong = (songId: string) => {
-    if (!isHost && roomCode) return;
-
     if (roomCode) {
       socket.emit("play", {
         roomCode,
@@ -100,7 +98,6 @@ export default function AllSongsModal({ open, onClose }: Props) {
   };
 
   const handleShufflePlayAll = () => {
-    if (!isHost && roomCode) return;
     if (songs.length === 0) return;
 
     let songsToQueue = songs.map(s => s.id);
@@ -173,9 +170,7 @@ export default function AllSongsModal({ open, onClose }: Props) {
           <div
             key={song.id}
             onClick={() => handlePlaySong(song.id)}
-            className={`flex items-center gap-3 rounded-xl p-3 transition border border-white/5 bg-white/5 hover:bg-white/10 ${
-              (isHost || !roomCode) ? "cursor-pointer" : ""
-            }`}
+            className={`flex items-center gap-3 rounded-xl p-3 transition border border-white/5 bg-white/5 hover:bg-white/10 cursor-pointer`}
           >
             <div className="flex w-6 justify-center shrink-0">
               <Play size={14} className="text-zinc-500 hover:text-white" />

@@ -25,20 +25,26 @@ export const getSongs = async (req: Request, res: Response) => {
   try {
     const songs = readSongsFile();
 
-    const songsWithUrls = await Promise.all(
-      songs.map(async (song) => {
-        const signedUrl = await s3Service.getSignedSongUrl(song.s3Key);
-        
-        return {
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          duration: song.duration,
-          cover: song.cover,
-          url: signedUrl,
-        };
-      })
-    );
+    const songsWithUrls = [];
+    const chunkSize = 50;
+    
+    for (let i = 0; i < songs.length; i += chunkSize) {
+      const chunk = songs.slice(i, i + chunkSize);
+      const processedChunk = await Promise.all(
+        chunk.map(async (song: any) => {
+          const signedUrl = await s3Service.getSignedSongUrl(song.s3Key);
+          return {
+            id: song.id,
+            title: song.title,
+            artist: song.artist,
+            duration: song.duration,
+            cover: song.cover,
+            url: signedUrl,
+          };
+        })
+      );
+      songsWithUrls.push(...processedChunk);
+    }
 
     res.json(songsWithUrls);
   } catch (error) {
@@ -87,20 +93,27 @@ export const refreshSongs = async (req: Request, res: Response) => {
       console.log(`Added ${newSongs.length} new songs from S3`);
     }
 
-    // Return all songs with signed URLs
-    const songsWithUrls = await Promise.all(
-      songs.map(async (song) => {
-        const signedUrl = await s3Service.getSignedSongUrl(song.s3Key);
-        return {
-          id: song.id,
-          title: song.title,
-          artist: song.artist,
-          duration: song.duration,
-          cover: song.cover,
-          url: signedUrl,
-        };
-      })
-    );
+    // Return all songs with signed URLs, chunked to prevent event loop blocking
+    const songsWithUrls = [];
+    const chunkSize = 50;
+    
+    for (let i = 0; i < songs.length; i += chunkSize) {
+      const chunk = songs.slice(i, i + chunkSize);
+      const processedChunk = await Promise.all(
+        chunk.map(async (song: any) => {
+          const signedUrl = await s3Service.getSignedSongUrl(song.s3Key);
+          return {
+            id: song.id,
+            title: song.title,
+            artist: song.artist,
+            duration: song.duration,
+            cover: song.cover,
+            url: signedUrl,
+          };
+        })
+      );
+      songsWithUrls.push(...processedChunk);
+    }
 
     res.json({ newCount: newKeys.length, songs: songsWithUrls });
   } catch (error) {
