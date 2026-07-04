@@ -207,13 +207,24 @@ export default function AudioProvider({ children }: Props) {
 
     // Use Zustand subscribe to instantly react to playback state changes, 
     // bypassing React's rendering throttle when the tab is in the background or locked!
-    const unsubscribe = usePlaybackStore.subscribe((state, prevState) => {
+    
+    let prevPlaying = usePlaybackStore.getState().playing;
+    let prevUpdatedAt = usePlaybackStore.getState().updatedAt;
+    let prevCurrentTime = usePlaybackStore.getState().currentTime;
+    let prevSongId = usePlaybackStore.getState().songId;
+
+    const unsubscribe = usePlaybackStore.subscribe((state) => {
       if (
-        state.playing !== prevState.playing ||
-        state.updatedAt !== prevState.updatedAt ||
-        state.currentTime !== prevState.currentTime ||
-        state.songId !== prevState.songId
+        state.playing !== prevPlaying ||
+        state.updatedAt !== prevUpdatedAt ||
+        state.currentTime !== prevCurrentTime ||
+        state.songId !== prevSongId
       ) {
+        prevPlaying = state.playing;
+        prevUpdatedAt = state.updatedAt;
+        prevCurrentTime = state.currentTime;
+        prevSongId = state.songId;
+        
         syncAudio(state);
       }
     });
