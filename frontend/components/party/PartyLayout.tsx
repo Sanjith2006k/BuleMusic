@@ -12,15 +12,12 @@ import FloatingPlayer from "../player/FloatingPlayer";
 import PlaylistUpNext from "./PlaylistUpNext";
 import { useRoomStore } from "@/store/roomStore";
 import AllSongsModal from "../modal/AllSongsModal";
-import NewlyAddedSongs from "../home/NewlyAddedSongs";
 import { ListMusic } from "lucide-react";
 
 export default function PartyLayout() {
   const activePlaylistId = useRoomStore((state) => state.activePlaylistId);
   const playlistQueue = useRoomStore((state) => state.playlistQueue);
   const [showAllSongs, setShowAllSongs] = useState(false);
-
-  const showUpNext = playlistQueue.length > 0;
 
   return (
     <>
@@ -40,7 +37,7 @@ export default function PartyLayout() {
 
               {/* Mobile-only Up Next (Shown directly after Now Playing) */}
               <div className="block lg:hidden">
-                {showUpNext && <PlaylistUpNext />}
+                <PlaylistUpNext />
               </div>
 
               {/* Mobile-only Show All Songs Button */}
@@ -55,8 +52,6 @@ export default function PartyLayout() {
               </div>
 
               <PlaylistSection />
-
-              <NewlyAddedSongs />
             </div>
 
             {/* Right Column (Desktop) */}
@@ -65,7 +60,7 @@ export default function PartyLayout() {
 
               {/* Desktop-only Up Next */}
               <div className="hidden lg:block">
-                {showUpNext && <PlaylistUpNext />}
+                <PlaylistUpNext />
               </div>
               
               <SearchSongs />
