@@ -37,11 +37,6 @@ export function registerRoomEvents(io: Server, socket: Socket) {
       isNewJoin = true; // Treat as new join since they were fully removed
     }
 
-    if (isNewJoin) {
-      // Notify everyone to play the 'ting' sound
-      io.to(code).emit("user-joined", { memberId });
-    }
-
     // Broadcast to everyone that the room member list updated
     io.to(code).emit("room-updated", room);
     

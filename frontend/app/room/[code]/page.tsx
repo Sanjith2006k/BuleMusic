@@ -154,39 +154,8 @@ export default function RoomPage() {
 
     socket.on("playback-state", handlePlayback);
 
-    const handleUserJoined = () => {
-      // Synthesize a pleasant "ting" sound using the Web Audio API
-      try {
-        const AudioContext = window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioContext();
-        const oscillator = ctx.createOscillator();
-        const gainNode = ctx.createGain();
-        
-        oscillator.connect(gainNode);
-        gainNode.connect(ctx.destination);
-        
-        // Settings for a "ting" chime
-        oscillator.type = "sine";
-        oscillator.frequency.setValueAtTime(880, ctx.currentTime); // A5 note
-        oscillator.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.1); // Slide up to A6
-        
-        // Enveloping to make it percussive
-        gainNode.gain.setValueAtTime(0, ctx.currentTime);
-        gainNode.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05); // Attack
-        gainNode.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 1); // Decay
-        
-        oscillator.start(ctx.currentTime);
-        oscillator.stop(ctx.currentTime + 1);
-      } catch (e) {
-        console.error("Failed to play ting sound:", e);
-      }
-    };
-
-    socket.on("user-joined", handleUserJoined);
-
     return () => {
       socket.off("playback-state", handlePlayback);
-      socket.off("user-joined", handleUserJoined);
     };
   }, [socket, setPlayback]);
 
