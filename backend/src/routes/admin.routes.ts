@@ -7,6 +7,6 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.put("/update", updateAdmin);
 router.post("/verify", verifyAdmin);
-router.post("/upload", upload.single("file"), uploadSong);
+router.post("/upload", upload.array("files", 50), uploadSong);
 
 export default router;

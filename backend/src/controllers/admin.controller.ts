@@ -39,16 +39,18 @@ export const uploadSong = async (req: Request, res: Response) => {
       return res.status(401).json({ success: false, message: "Invalid admin credentials" });
     }
 
-    if (!req.file) {
-      return res.status(400).json({ success: false, message: "No file uploaded" });
+    if (!req.files || (req.files as Express.Multer.File[]).length === 0) {
+      return res.status(400).json({ success: false, message: "No files uploaded" });
     }
 
-    const { originalname, buffer, mimetype } = req.file;
+    const files = req.files as Express.Multer.File[];
     
-    // Upload to S3
-    const key = await s3Service.uploadSong(buffer, originalname, mimetype);
+    // Upload all files to S3 concurrently
+    const keys = await Promise.all(
+      files.map(file => s3Service.uploadSong(file.buffer, file.originalname, file.mimetype))
+    );
 
-    res.json({ success: true, message: "Song uploaded to S3", key });
+    res.json({ success: true, message: `${files.length} song(s) uploaded to S3`, keys });
   } catch (error) {
     console.error("Upload error:", error);
     res.status(500).json({ success: false, message: (error as Error).message });
