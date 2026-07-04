@@ -4,7 +4,7 @@ import roomService from "../services/room.service";
 const disconnectTimeouts = new Map<string, NodeJS.Timeout>();
 
 export function registerRoomEvents(io: Server, socket: Socket) {
-  socket.on("join-room", ({ code, memberId }) => {
+  socket.on("join-room", ({ code, memberId, name }) => {
     socket.join(code);
     
     // Store data on socket for disconnect handling
@@ -22,6 +22,17 @@ export function registerRoomEvents(io: Server, socket: Socket) {
     const room = roomService.getRoom(code);
 
     if (!room) return;
+
+    // If they are not in the room members list (e.g. timeout expired or direct link), add them!
+    const existingMember = room.members.find(m => m.id === memberId);
+    if (!existingMember) {
+      room.members.push({
+        id: memberId,
+        name: name || "Guest",
+        isHost: false
+      });
+      isNewJoin = true; // Treat as new join since they were fully removed
+    }
 
     if (isNewJoin) {
       // Notify everyone to play the 'ting' sound

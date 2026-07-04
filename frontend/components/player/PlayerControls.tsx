@@ -30,11 +30,22 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
   const handlePlayPause = () => {
     const currentState = usePlaybackStore.getState();
 
+    // Calculate the real current time based on how long it's been playing
+    let realCurrentTime = currentState.currentTime;
+    if (currentState.playing && currentState.updatedAt) {
+      const elapsed = (Date.now() - currentState.updatedAt) / 1000;
+      realCurrentTime += elapsed;
+    } else {
+      // If it's already paused, use the uiCurrentTime (which has the correct paused position)
+      // or fall back to the store's currentTime.
+      realCurrentTime = currentState.uiCurrentTime || currentState.currentTime;
+    }
+
     if (playing) {
       if (isHost) {
         socket.emit("pause", { 
           roomCode, 
-          currentTime: currentState.currentTime 
+          currentTime: realCurrentTime 
         });
       } else {
         // Only host can pause in a party, or if offline
@@ -46,7 +57,7 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
       if (isHost) {
         socket.emit("play", {
           roomCode,
-          currentTime: currentState.currentTime,
+          currentTime: realCurrentTime,
           songId: currentState.songId
         });
       } else {

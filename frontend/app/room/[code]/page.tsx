@@ -41,9 +41,13 @@ export default function RoomPage() {
   useEffect(() => {
     if (!hasHydrated || !roomCode || !userId) return;
 
+    // Try to find the user's name from the existing room state
+    const myName = useRoomStore.getState().members.find(m => m.id === userId)?.name;
+
     socket.emit("join-room", {
       code: roomCode,
       memberId: userId,
+      name: myName || "Guest",
     });
   }, [socket, roomCode, userId, hasHydrated]);
 
