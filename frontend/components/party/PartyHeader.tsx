@@ -7,7 +7,8 @@ import { usePlaybackStore } from "@/store/playbackStore";
 import { toast } from "sonner";
 import { useState } from "react";
 import ChangePasswordModal from "../modal/ChangePasswordModal";
-import { KeyRound, Power, Music2 } from "lucide-react";
+import { KeyRound, Power, Music2, UploadCloud } from "lucide-react";
+import UploadSongModal from "../modal/UploadSongModal";
 import useSocket from "@/hooks/useSocket";
 import { APP_NAME } from "@/lib/constants";
 import Link from "next/link";
@@ -16,6 +17,7 @@ import { useRouter } from "next/navigation";
 export default function PartyHeader() {
   const { roomCode, hostId, userId, setRoomState } = useRoomStore();
   const [modalOpen, setModalOpen] = useState(false);
+  const [isUploadOpen, setIsUploadOpen] = useState(false);
   const isHost = userId === hostId && hostId !== null;
   const socket = useSocket();
   const router = useRouter();
@@ -77,6 +79,9 @@ export default function PartyHeader() {
 
           {isHost ? (
             <>
+              <Button variant="secondary" onClick={() => setIsUploadOpen(true)} title="Upload Song" className="text-[#0A84FF] hover:bg-[#0A84FF]/10">
+                <UploadCloud size={18} />
+              </Button>
               <Button variant="secondary" onClick={() => setModalOpen(true)} title="Change Password">
                 <KeyRound size={18} />
               </Button>
@@ -93,6 +98,7 @@ export default function PartyHeader() {
       </div>
 
       <ChangePasswordModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <UploadSongModal open={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
     </header>
   );
 }
