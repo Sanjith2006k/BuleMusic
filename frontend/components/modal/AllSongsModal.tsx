@@ -3,6 +3,7 @@
 import { useSongStore } from "@/store/songStore";
 import { useRoomStore } from "@/store/roomStore";
 import { usePlaybackStore } from "@/store/playbackStore";
+import { usePlayerStore } from "@/store/playerStore";
 import useAudio from "@/hooks/useAudio";
 import useSocket from "@/hooks/useSocket";
 import Modal from "./Modal";
