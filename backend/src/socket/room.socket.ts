@@ -40,8 +40,19 @@ export function registerRoomEvents(io: Server, socket: Socket) {
     // Broadcast to everyone that the room member list updated
     io.to(code).emit("room-updated", room);
     
-    // Send the complete state specifically to the user who just joined/reconnected
-    socket.emit("sync-initial-state", room);
+    // Send the complete state specifically to the user who just joined/reconnected.
+    // Compute the real current playback position so the joiner doesn't miss audio.
+    const now = Date.now();
+    let syncPlayback = { ...room.playback };
+    if (syncPlayback.playing && syncPlayback.updatedAt) {
+      const elapsed = (now - syncPlayback.updatedAt) / 1000;
+      syncPlayback = {
+        ...syncPlayback,
+        currentTime: syncPlayback.currentTime + elapsed,
+        updatedAt: now,
+      };
+    }
+    socket.emit("sync-initial-state", { ...room, playback: syncPlayback });
 
     console.log(`${memberId} joined ${code}`);
   });

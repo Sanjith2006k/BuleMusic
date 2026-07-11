@@ -12,6 +12,7 @@ import FloatingPlayer from "../player/FloatingPlayer";
 import PlaylistUpNext from "./PlaylistUpNext";
 import { useRoomStore } from "@/store/roomStore";
 import AllSongsModal from "../modal/AllSongsModal";
+import RecentlyAdded from "./RecentlyAdded";
 import { ListMusic } from "lucide-react";
 
 export default function PartyLayout() {
@@ -63,6 +64,7 @@ export default function PartyLayout() {
                 <PlaylistUpNext />
               </div>
               
+              <RecentlyAdded />
               <SearchSongs />
             </div>
           </div>

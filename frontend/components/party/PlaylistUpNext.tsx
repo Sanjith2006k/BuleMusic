@@ -7,11 +7,10 @@ import { usePlaybackStore } from "@/store/playbackStore";
 import { usePlaylistStore } from "@/store/playlistStore";
 import { usePlayerStore } from "@/store/playerStore";
 import Image from "next/image";
-import { Play, Shuffle, GripVertical } from "lucide-react";
+import { Play, Shuffle, Plus } from "lucide-react";
 import useSocket from "@/hooks/useSocket";
 import useAudio from "@/hooks/useAudio";
-import { Reorder, useDragControls } from "framer-motion";
-import { useState } from "react";
+import { toast } from "sonner";
 
 export default function PlaylistUpNext() {
   const playlistQueue = useRoomStore((state) => state.playlistQueue);
@@ -26,13 +25,10 @@ export default function PlaylistUpNext() {
 
   const isHost = userId === hostId && hostId !== null;
 
-  const [isDragging, setIsDragging] = useState(false);
-
   const activePlaylist = activePlaylistId ? playlists.find(p => p.id === activePlaylistId) : null;
 
   const handlePlayFromQueue = (index: number, songId: string) => {
     if (!isHost && roomCode) return;
-    if (isDragging) return; // Prevent click if we were dragging
 
     // The new queue should be everything AFTER this clicked index
     const newQueue = playlistQueue.slice(index + 1);
@@ -63,16 +59,14 @@ export default function PlaylistUpNext() {
   const userQueue = playlistQueue.filter((item) => item.addedBy !== "System");
   const systemQueue = playlistQueue.filter((item) => item.addedBy === "System");
 
-  const handleUserQueueReorder = (newOrder: typeof playlistQueue) => {
-    const combined = [...newOrder, ...systemQueue];
-    setPlaylistQueue(combined);
-    if (roomCode) socket.emit("set-queue", { roomCode, queue: combined });
-  };
-
-  const handleSystemQueueReorder = (newOrder: typeof playlistQueue) => {
-    const combined = [...userQueue, ...newOrder];
-    setPlaylistQueue(combined);
-    if (roomCode) socket.emit("set-queue", { roomCode, queue: combined });
+  const handleAddToQueue = (e: React.MouseEvent, songId: string, title: string) => {
+    e.stopPropagation(); // Prevent triggering handlePlayFromQueue
+    if (roomCode) {
+      socket.emit("add-to-queue", { roomCode, songId, memberId: userId });
+      toast.success(`Added ${title} to queue`);
+    } else {
+      toast.error("You must be in a party to add to queue.");
+    }
   };
 
   const renderQueueItem = (item: any, globalIndex: number) => {
@@ -80,21 +74,13 @@ export default function PlaylistUpNext() {
     if (!song) return null;
 
     return (
-      <Reorder.Item
+      <div
         key={item.id}
-        value={item}
-        dragListener={true} // Anyone can drag
-        onDragStart={() => setIsDragging(true)}
-        onDragEnd={() => setTimeout(() => setIsDragging(false), 200)}
         className={`flex items-center gap-3 rounded-xl p-2.5 transition border border-white/5 bg-white/5 hover:bg-white/10 cursor-pointer`}
         onClick={() => handlePlayFromQueue(globalIndex, song.id)}
       >
         <div className="flex w-5 justify-center shrink-0">
-          {(isHost || roomCode) ? (
-            <GripVertical size={14} className="text-zinc-600 cursor-grab active:cursor-grabbing hover:text-white transition" />
-          ) : (
-            <span className="text-xs text-zinc-600">{globalIndex + 1}</span>
-          )}
+          <span className="text-xs text-zinc-600">{globalIndex + 1}</span>
         </div>
 
         <Image
@@ -114,7 +100,16 @@ export default function PlaylistUpNext() {
             <p className="text-[10px] text-[#0A84FF] mt-0.5 font-medium truncate">Added by {item.addedBy}</p>
           )}
         </div>
-      </Reorder.Item>
+        <div className="flex items-center gap-1 shrink-0">
+          <button 
+            onClick={(e) => handleAddToQueue(e, song.id, song.title)}
+            className="p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10 shrink-0"
+            title="Add to Queue"
+          >
+            <Plus size={16} />
+          </button>
+        </div>
+      </div>
     );
   };
 
@@ -135,14 +130,9 @@ export default function PlaylistUpNext() {
             {userQueue.length > 0 && (
               <div>
                 <h3 className="text-sm font-semibold text-white mb-3">Next in queue</h3>
-                <Reorder.Group 
-                  axis="y" 
-                  values={userQueue} 
-                  onReorder={handleUserQueueReorder} 
-                  className="space-y-2"
-                >
+                <div className="space-y-2">
                   {userQueue.map((item, index) => renderQueueItem(item, index))}
-                </Reorder.Group>
+                </div>
               </div>
             )}
 
@@ -152,14 +142,9 @@ export default function PlaylistUpNext() {
                   Next from: <span className="text-white">{activePlaylist ? activePlaylist.name : 'Playlist'}</span>
                   {shuffle && <span className="text-[#0A84FF] text-xs font-normal bg-[#0A84FF]/10 px-2 py-0.5 rounded-full">Shuffled</span>}
                 </h3>
-                <Reorder.Group 
-                  axis="y" 
-                  values={systemQueue} 
-                  onReorder={handleSystemQueueReorder} 
-                  className="space-y-2"
-                >
+                <div className="space-y-2">
                   {systemQueue.map((item, index) => renderQueueItem(item, userQueue.length + index))}
-                </Reorder.Group>
+                </div>
               </div>
             )}
           </>

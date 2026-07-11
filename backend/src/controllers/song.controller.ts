@@ -40,6 +40,7 @@ export const getSongs = async (req: Request, res: Response) => {
             duration: song.duration,
             cover: song.cover,
             url: signedUrl,
+            createdAt: song.createdAt || "2024-01-01T00:00:00.000Z",
           };
         })
       );
@@ -85,6 +86,7 @@ export const refreshSongs = async (req: Request, res: Response) => {
           duration: "3:00",
           cover: `https://picsum.photos/200?${maxId + index + 1}`,
           s3Key: key,
+          createdAt: new Date().toISOString(),
         };
       });
 
@@ -109,6 +111,7 @@ export const refreshSongs = async (req: Request, res: Response) => {
             duration: song.duration,
             cover: song.cover,
             url: signedUrl,
+            createdAt: song.createdAt || "2024-01-01T00:00:00.000Z",
           };
         })
       );

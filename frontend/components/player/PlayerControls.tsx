@@ -120,36 +120,41 @@ export default function PlayerControls({ mobileOnly = false }: { mobileOnly?: bo
     // Filter out the currently playing song — it should keep playing
     const remaining = currentPlaylistQueue.filter(item => item.songId !== nowPlaying);
     
+    const userAdded = remaining.filter(item => item.addedBy !== "System");
+    const systemAdded = remaining.filter(item => item.addedBy === "System");
+    
     if (newShuffleState) {
-      // SHUFFLE ON: shuffle the remaining queue
-      const shuffled = [...remaining];
+      // SHUFFLE ON: shuffle the system remaining queue
+      const shuffled = [...systemAdded];
       for (let i = shuffled.length - 1; i > 0; i--) {
         const j = Math.floor(Math.random() * (i + 1));
         [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
       }
-      setPlaylistQueue(shuffled);
-      socket.emit("set-queue", { roomCode, queue: shuffled });
+      const newQueue = [...userAdded, ...shuffled];
+      setPlaylistQueue(newQueue);
+      socket.emit("set-queue", { roomCode, queue: newQueue });
     } else {
-      // SHUFFLE OFF: restore original playlist order, only songs still remaining
+      // SHUFFLE OFF: restore original playlist order, only system songs still remaining
       const playlist = playlists.find(p => p.id === activePlaylistId);
       if (playlist) {
-        // We need to reorder `remaining` according to the original `playlist.songIds`
+        // We need to reorder `systemAdded` according to the original `playlist.songIds`
         const restored = [];
-        const remainingSet = new Set(remaining);
+        const systemAddedSet = new Set(systemAdded);
         
         for (const songId of playlist.songIds) {
-          const item = remaining.find(r => r.songId === songId);
+          const item = Array.from(systemAddedSet).find(r => r.songId === songId);
           if (item) {
             restored.push(item);
-            remainingSet.delete(item);
+            systemAddedSet.delete(item);
           }
         }
         
-        // Append any manually added songs that weren't part of the original playlist
-        restored.push(...Array.from(remainingSet));
+        // Append any system songs that weren't part of the original playlist
+        restored.push(...Array.from(systemAddedSet));
         
-        setPlaylistQueue(restored);
-        socket.emit("set-queue", { roomCode, queue: restored });
+        const newQueue = [...userAdded, ...restored];
+        setPlaylistQueue(newQueue);
+        socket.emit("set-queue", { roomCode, queue: newQueue });
       }
     }
   };

@@ -4,9 +4,10 @@ export interface Song {
   id: string;
   title: string;
   artist: string;
-  duration: string;
-  cover: string;
-  url: string;
+  duration?: string;
+  cover?: string;
+  url?: string;
+  createdAt?: string;
 }
 
 interface SongState {

@@ -153,6 +153,13 @@ export default function RoomPage() {
   useEffect(() => {
     const handlePlayback = (playback: any) => {
       console.log("Playback:", playback);
+      
+      // Fix for clock skew: Party members use their local time to avoid skipping the beginning of songs
+      const { userId, hostId } = useRoomStore.getState();
+      if (userId !== hostId && playback.updatedAt) {
+        playback.updatedAt = Date.now();
+      }
+      
       setPlayback(playback);
     };
 
