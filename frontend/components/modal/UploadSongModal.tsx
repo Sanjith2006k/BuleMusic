@@ -6,6 +6,8 @@ import Modal from "./Modal";
 import Button from "../ui/Button";
 import Input from "../ui/Input";
 import { useSongStore } from "@/store/songStore";
+import { useRoomStore } from "@/store/roomStore";
+import { socket } from "@/lib/socket";
 import { UploadCloud } from "lucide-react";
 
 interface Props {
@@ -75,8 +77,24 @@ export default function UploadSongModal({ open, onClose }: Props) {
             method: "POST"
           });
           if (refreshRes.ok) {
+            const data = await refreshRes.json();
             await fetchSongs();
             toast.success("Song list updated!");
+            
+            const { roomCode, userId } = useRoomStore.getState();
+            
+            // Auto-add new songs to the queue
+            if (data.newCount > 0 && roomCode && socket) {
+              const newSongs = data.songs.slice(-data.newCount);
+              newSongs.forEach((song: any) => {
+                socket.emit("add-to-queue", { roomCode, songId: song.id, memberId: userId });
+              });
+            }
+            
+            // Broadcast refresh to other users
+            if (socket) {
+               socket.emit("song-renamed"); 
+            }
           }
         } catch (e) {
           console.error("Failed to refresh songs", e);

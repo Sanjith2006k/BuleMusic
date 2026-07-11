@@ -35,9 +35,9 @@ export const s3Service = {
       throw new Error("S3_BUCKET_NAME is not set");
     }
 
-    // Replace spaces with hyphens and ensure it ends with .mp3
     const safeName = fileName.replace(/\s+/g, '-').replace(/[^a-zA-Z0-9.\-_]/g, '');
-    const key = `songs/${Date.now()}-${safeName}`;
+    const randomHex = Math.floor(Math.random() * 10000).toString(16);
+    const key = `songs/${Date.now()}-${randomHex}-${safeName}`;
 
     const command = new PutObjectCommand({
       Bucket: env.S3_BUCKET_NAME,

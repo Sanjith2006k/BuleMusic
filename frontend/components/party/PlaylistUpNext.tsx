@@ -7,7 +7,7 @@ import { usePlaybackStore } from "@/store/playbackStore";
 import { usePlaylistStore } from "@/store/playlistStore";
 import { usePlayerStore } from "@/store/playerStore";
 import Image from "next/image";
-import { Play, Shuffle, Plus } from "lucide-react";
+import { Play, Shuffle, Plus, Trash2 } from "lucide-react";
 import useSocket from "@/hooks/useSocket";
 import useAudio from "@/hooks/useAudio";
 import { toast } from "sonner";
@@ -69,6 +69,19 @@ export default function PlaylistUpNext() {
     }
   };
 
+  const handleRemoveFromQueue = (e: React.MouseEvent, index: number, title: string) => {
+    e.stopPropagation();
+    if (roomCode) {
+      socket.emit("remove-from-queue", { roomCode, index });
+      toast.success(`Removed ${title} from queue`);
+    } else {
+      const newQueue = [...playlistQueue];
+      newQueue.splice(index, 1);
+      setPlaylistQueue(newQueue);
+      toast.success(`Removed ${title} from queue`);
+    }
+  };
+
   const renderQueueItem = (item: any, globalIndex: number) => {
     const song = getSongById(item.songId);
     if (!song) return null;
@@ -76,7 +89,7 @@ export default function PlaylistUpNext() {
     return (
       <div
         key={item.id}
-        className={`flex items-center gap-3 rounded-xl p-2.5 transition border border-white/5 bg-white/5 hover:bg-white/10 cursor-pointer`}
+        className={`flex items-center gap-3 rounded-xl p-2.5 transition border border-white/5 bg-white/5 hover:bg-white/10 cursor-pointer group`}
         onClick={() => handlePlayFromQueue(globalIndex, song.id)}
       >
         <div className="flex w-5 justify-center shrink-0">
@@ -100,11 +113,18 @@ export default function PlaylistUpNext() {
             <p className="text-[10px] text-[#0A84FF] mt-0.5 font-medium truncate">Added by {item.addedBy}</p>
           )}
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex items-center gap-1 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+          <button 
+            onClick={(e) => handleRemoveFromQueue(e, globalIndex, song.title)}
+            className="p-2 text-zinc-400 hover:text-red-400 transition rounded-full hover:bg-white/10 shrink-0"
+            title="Remove from Queue"
+          >
+            <Trash2 size={16} />
+          </button>
           <button 
             onClick={(e) => handleAddToQueue(e, song.id, song.title)}
             className="p-2 text-zinc-400 hover:text-white transition rounded-full hover:bg-white/10 shrink-0"
-            title="Add to Queue"
+            title="Add to Queue Again"
           >
             <Plus size={16} />
           </button>
